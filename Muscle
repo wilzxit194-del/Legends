@@ -1,0 +1,190 @@
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+-- Serviços e Variáveis Globais
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local StatsService = game:GetService("Stats")
+local VirtualUser = game:GetService("VirtualUser")
+
+-- Garante que o player carregue corretamente
+local player = nil
+repeat task.wait() player = Players.LocalPlayer until player
+
+-- Remotes
+local rEvents = ReplicatedStorage:WaitForChild("rEvents", 10)
+local openRemote = rEvents and rEvents:WaitForChild("openCrystalRemote", 10)
+local autoEvolveRemote = rEvents and rEvents:WaitForChild("autoEvolveRemote", 10)
+local sellPetEvent = rEvents and rEvents:WaitForChild("sellPetEvent", 10)
+local rebirthRemote = rEvents and rEvents:WaitForChild("rebirthRemote", 10)
+
+-- Função para buscar pets (Nil/Hidden)
+local function __getNil(name, class, debugId)
+    local okNil, nilInsts = pcall(getnilinstances)
+    if okNil and nilInsts then
+        for _, v in pairs(nilInsts) do
+            if v.ClassName==class and v.Name==name then return v end
+        end
+    end
+    return nil
+end
+
+-- Estados
+local states = {
+    masterToggle = false,
+    autoOpen1 = false,
+    autoOpen2 = false,
+    autoOpen3 = false, -- Infinity Void
+    autoEvolve = false,
+    autoSellDarkstorm = false,
+    autoSellPegasus = false,
+    autoSellMillenium = false, -- Rising Millenium Hydra
+    autoSellCorrupted = false,
+    autoReps = false,
+    autoRebirth = false,
+    antiAFK = false
+}
+
+local metrics = {
+    totalSoldMillenium = 0,
+    totalSoldCorrupted = 0
+}
+
+-- Janela Principal
+local Window = Rayfield:CreateWindow({
+    Name = "OWNER AFK PAID HUB",
+    LoadingTitle = "⚡ OWNER AFK PAID HUB",
+    LoadingSubtitle = "by Roblox Dev | Ultra Fast Edition",
+    ConfigurationSaving = { Enabled = false },
+    KeySystem = false,
+    CustomImage = "rbxassetid://1228978229",
+    Theme = "Dark"
+})
+
+-- TAB 1: FARMING
+local FarmTab = Window:CreateTab("🌾 Opções de Farm", 1228978229)
+FarmTab:CreateToggle({ Name = "⚡ Ativar Sistema Geral", Callback = function(V) states.masterToggle = V end })
+
+FarmTab:CreateSection("Automações de Treino")
+FarmTab:CreateToggle({ Name = "🏋️ Auto Lift / Reps", Callback = function(V) states.autoReps = V end })
+FarmTab:CreateToggle({ Name = "🔄 Auto Rebirth", Callback = function(V) states.autoRebirth = V end })
+
+FarmTab:CreateSection("Automações de Cristais")
+FarmTab:CreateToggle({ Name = "🥚 Abrir Unlimited Secrets", Callback = function(V) states.autoOpen1 = V end })
+FarmTab:CreateToggle({ Name = "🥚 Abrir Ultra Shockwave", Callback = function(V) states.autoOpen2 = V end })
+FarmTab:CreateToggle({ Name = "🥚 Abrir Infinity Void Crystal", Callback = function(V) states.autoOpen3 = V end })
+FarmTab:CreateToggle({ Name = "🧬 Auto Evoluir Pets", Callback = function(V) states.autoEvolve = V end })
+
+FarmTab:CreateSection("Automações de Venda")
+FarmTab:CreateToggle({ Name = "🔥 Vender Darkstorm Elemental Hydra", Callback = function(V) states.autoSellDarkstorm = V end })
+FarmTab:CreateToggle({ Name = "🔥 Vender Golden Sun Pegasus", Callback = function(V) states.autoSellPegasus = V end })
+FarmTab:CreateToggle({ Name = "🔥 Vender Rising Millenium Hydra", Callback = function(V) states.autoSellMillenium = V end })
+FarmTab:CreateToggle({ Name = "🔥 Vender Corrupted Elements Hydra", Callback = function(V) states.autoSellCorrupted = V end })
+
+-- TAB 2: MISC
+local MiscTab = Window:CreateTab("📊 Misc & Ganhos", 1228978229)
+MiscTab:CreateToggle({ Name = "🛡️ Anti-AFK", Callback = function(V) states.antiAFK = V end })
+
+local LabelSoldMillenium = MiscTab:CreateLabel("Millenium Hydras Vendidas: 0")
+local LabelSoldCorrupted = MiscTab:CreateLabel("Corrupted Hydras Vendidas: 0")
+
+MiscTab:CreateButton({ Name = "Zerar Contadores", Callback = function() 
+    metrics.totalSoldMillenium = 0; LabelSoldMillenium:Set("Millenium Hydras Vendidas: 0")
+    metrics.totalSoldCorrupted = 0; LabelSoldCorrupted:Set("Corrupted Hydras Vendidas: 0") 
+end })
+
+-- WORKERS (ROBUSTOS)
+
+-- Anti-AFK
+player.Idled:Connect(function() 
+    if states.antiAFK then 
+        VirtualUser:Button2Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame) 
+        task.wait(1) 
+        VirtualUser:Button2Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame) 
+    end 
+end)
+
+-- Auto Lift/Reps
+task.spawn(function()
+    while true do
+        task.wait(0.1)
+        if states.masterToggle and states.autoReps then
+            local remote = player:FindFirstChild("muscleEvent") or ReplicatedStorage:FindFirstChild("muscleEvent")
+            if remote then remote:FireServer("rep") end
+        end
+    end
+end)
+
+-- Auto Rebirth
+task.spawn(function()
+    while true do
+        task.wait(0.5)
+        if states.masterToggle and states.autoRebirth then
+            local remote = ReplicatedStorage:FindFirstChild("rEvents") and ReplicatedStorage.rEvents:FindFirstChild("rebirthRemote")
+            if remote then pcall(function() remote:InvokeServer("rebirthRequest") end) end
+        end
+    end
+end)
+
+-- Auto Open Crystals
+task.spawn(function()
+    while true do
+        task.wait(0.15)
+        if states.masterToggle and openRemote then
+            if states.autoOpen1 then openRemote:InvokeServer("openCrystal", "Unlimited Secrets Crystal", 1) end
+            if states.autoOpen2 then openRemote:InvokeServer("openCrystal", "Ultra Shockwave Crystal", 1) end
+            if states.autoOpen3 then openRemote:InvokeServer("openCrystal", "Infinity Void Crystal", 1) end
+        end
+    end
+end)
+
+-- Auto Evolve
+task.spawn(function()
+    while true do
+        task.wait(2)
+        if states.masterToggle and states.autoEvolve and autoEvolveRemote then
+            pcall(function() autoEvolveRemote:InvokeServer() end)
+        end
+    end
+end)
+
+-- Auto Sell Loop (Único para otimização)
+task.spawn(function()
+    while true do
+        task.wait(0.5)
+        if states.masterToggle and sellPetEvent then
+            local elite = player:FindFirstChild("petsFolder") and player.petsFolder:FindFirstChild("Elite")
+            if elite then
+                for _, pet in ipairs(elite:GetChildren()) do
+                    local isEquipped = pet:FindFirstChild("Equipped") or pet:FindFirstChild("isEquipped")
+                    if not (isEquipped and isEquipped.Value == true) then
+                        
+                        -- Vender Darkstorm
+                        if states.autoSellDarkstorm and string.find(pet.Name, "Darkstorm Elemental Hydra") then
+                            sellPetEvent:FireServer("sellPet", pet)
+                        end
+                        -- Vender Pegasus
+                        if states.autoSellPegasus and string.find(pet.Name, "Golden Sun Pegasus") then
+                            sellPetEvent:FireServer("sellPet", pet)
+                        end
+                        -- Vender Rising Millenium (Pasta Elite)
+                        if states.autoSellMillenium and string.find(pet.Name, "Rising Millenium Hydra") then
+                            sellPetEvent:FireServer("sellPet", pet)
+                            metrics.totalSoldMillenium += 1
+                            LabelSoldMillenium:Set("Millenium Hydras Vendidas: " .. metrics.totalSoldMillenium)
+                        end
+                    end
+                end
+            end
+            
+            -- Vender Corrupted (Nil)
+            if states.autoSellCorrupted then
+                local pet = __getNil("Corrupted Elements Hydra", "StringValue")
+                if pet then
+                    sellPetEvent:FireServer("sellPet", pet)
+                    metrics.totalSoldCorrupted += 1
+                    LabelSoldCorrupted:Set("Corrupted Hydras Vendidas: " .. metrics.totalSoldCorrupted)
+                end
+            end
+        end
+    end
+end)
