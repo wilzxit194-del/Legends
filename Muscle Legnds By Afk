@@ -4,51 +4,74 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StatsService = game:GetService("Stats")
 local VirtualUser = game:GetService("VirtualUser")
-local VirtualInputManager = game:GetService("VirtualInputManager")
 
 local player = Players.LocalPlayer
 
--- Remotes do Jogo
+-- Remotes
 local rEvents = ReplicatedStorage:WaitForChild("rEvents", 10)
 local openRemote = rEvents and rEvents:WaitForChild("openCrystalRemote", 10)
 local autoEvolveRemote = rEvents and rEvents:WaitForChild("autoEvolveRemote", 10)
 local sellPetEvent = rEvents and rEvents:WaitForChild("sellPetEvent", 10)
 local rebirthRemote = rEvents and rEvents:WaitForChild("rebirthRemote", 10)
 
--- Estados de Farm
+-- Função para buscar pets (Nil/Hidden)
+local function __getNil(name, class, debugId)
+    local okNil, nilInsts = pcall(getnilinstances)
+    if okNil and nilInsts then
+        if debugId then
+            for _, v in pairs(nilInsts) do
+                if v.ClassName==class and v.Name==name then
+                    local okId, id = pcall(function() return v:GetDebugId() end)
+                    if okId and id==debugId then return v end
+                end
+            end
+        end
+        for _, v in pairs(nilInsts) do
+            if v.ClassName==class and v.Name==name then return v end
+        end
+    end
+    local okGame, found = pcall(function()
+        for _, v in ipairs(game:GetDescendants()) do
+            if v.ClassName==class and v.Name==name then
+                if not debugId then return v end
+                local okId2, id2 = pcall(function() return v:GetDebugId() end)
+                if okId2 and id2==debugId then return v end
+            end
+        end
+        return nil
+    end)
+    return okGame and found or nil
+end
+
+-- Estados de Farm e Utilitários
 local states = {
     masterToggle = false,
     autoOpen = false,
+    autoOpen2 = false,
     autoEvolve = false,
     autoSell = false,
+    autoSell2 = false,
+    autoSellCorrupted = false, -- Novo Toggle
     autoReps = false,
     autoRebirth = false,
-    antiAFK = false,
-    openAmount = 1
+    antiAFK = false
 }
 
--- Métrica de Ganhos e Tempo
+-- Métrica de Ganhos
 local metrics = {
     totalOpened = 0,
+    totalOpened2 = 0,
     totalSold = 0,
-    totalRebirths = 0,
-    afkTime = 0,
-    sessionTime = 0
+    totalSold2 = 0,
+    totalSoldCorrupted = 0, -- Nova métrica
+    totalRebirths = 0
 }
 
--- Função Auxiliar para Formatar Tempo (HH:MM:SS)
-local function formatTime(seconds)
-    local hours = math.floor(seconds / 3600)
-    local mins = math.floor((seconds % 3600) / 60)
-    local secs = seconds % 60
-    return string.format("%02dh %02dm %02ds", hours, mins, secs)
-end
-
--- Interface Gráfica Principal
+-- Janela Principal
 local Window = Rayfield:CreateWindow({
-    Name = "OWNER AFK PAID HUB | ULTRA SPEED",
+    Name = "OWNER AFK PAID HUB",
     LoadingTitle = "⚡ OWNER AFK PAID HUB",
-    LoadingSubtitle = "by Roblox Dev | Maximum Performance Edition",
+    LoadingSubtitle = "by Roblox Dev | Ultra Fast Edition",
     ConfigurationSaving = {
         Enabled = false
     },
@@ -57,7 +80,7 @@ local Window = Rayfield:CreateWindow({
     Theme = "Dark"
 })
 
--- Aplicar Imagem no Fundo da Interface
+-- Fundo Personalizado
 task.spawn(function()
     pcall(function()
         local coreGui = game:GetService("CoreGui")
@@ -79,9 +102,7 @@ task.spawn(function()
     end)
 end)
 
--- =======================================================
--- TAB 1: FARMING & AUTOMAÇÃO
--- =======================================================
+-- TAB 1: FARMING
 local FarmTab = Window:CreateTab("🌾 Opções de Farm", 1228978229)
 
 FarmTab:CreateToggle({
@@ -92,10 +113,10 @@ FarmTab:CreateToggle({
     end,
 })
 
-FarmTab:CreateSection("Automações de Treino (Turbo Instantâneo)")
+FarmTab:CreateSection("Automações de Treino (Zero Delay)")
 
 FarmTab:CreateToggle({
-    Name = "🏋️ Auto Lift / Reps (Fast Bypass)",
+    Name = "🏋️ Auto Lift / Reps (Velocidade Máxima)",
     CurrentValue = false,
     Callback = function(Value)
         states.autoReps = Value
@@ -103,7 +124,7 @@ FarmTab:CreateToggle({
 })
 
 FarmTab:CreateToggle({
-    Name = "🔄 Auto Rebirth (Zero Delay)",
+    Name = "🔄 Auto Rebirth Ultra Rápido (Zero Delay)",
     CurrentValue = false,
     Callback = function(Value)
         states.autoRebirth = Value
@@ -113,19 +134,18 @@ FarmTab:CreateToggle({
 FarmTab:CreateSection("Automações de Cristais e Pets")
 
 FarmTab:CreateToggle({
-    Name = "🥚 Auto Abrir Ultra Shockwave Crystal",
+    Name = "🥚 Auto Abrir Unlimited Secrets Crystal",
     CurrentValue = false,
     Callback = function(Value)
         states.autoOpen = Value
     end,
 })
 
-FarmTab:CreateDropdown({
-    Name = "Quantidade por Abertura",
-    Options = {"1", "3"},
-    CurrentOption = "1",
-    Callback = function(Option)
-        states.openAmount = tonumber(Option[1]) or 1
+FarmTab:CreateToggle({
+    Name = "🥚 Auto Abrir 2 (Ultra Shockwave Crystal)",
+    CurrentValue = false,
+    Callback = function(Value)
+        states.autoOpen2 = Value
     end,
 })
 
@@ -138,65 +158,74 @@ FarmTab:CreateToggle({
 })
 
 FarmTab:CreateToggle({
-    Name = "🔥 Auto Vender Hydra (Não Equipadas)",
+    Name = "🔥 Auto Vender Darkstorm Elemental Hydra",
     CurrentValue = false,
     Callback = function(Value)
         states.autoSell = Value
     end,
 })
 
--- =======================================================
--- TAB 2: MISC & PAINEL DE DATAS
--- =======================================================
-local MiscTab = Window:CreateTab("📊 Misc & Ganhos", 1228978229)
-
-MiscTab:CreateSection("Utilitários da Conta")
-
-MiscTab:CreateToggle({
-    Name = "🛡️ Anti-AFK (Prevenir Desconexão)",
+FarmTab:CreateToggle({
+    Name = "🔥 Auto Vender Golden Sun Pegasus",
     CurrentValue = false,
     Callback = function(Value)
-        states.antiAFK = Value
-        if Value then
-            metrics.afkTime = 0
-            Rayfield:Notify({
-                Title = "Anti-AFK Ativado",
-                Content = "Sua sessão permanecerá ativa indefinidamente.",
-                Duration = 3,
-                Image = 1228978229,
-            })
-        end
+        states.autoSell2 = Value
     end,
 })
 
-MiscTab:CreateSection("Painel de Controle de Sessão")
+FarmTab:CreateToggle({
+    Name = "🔥 Auto Vender Corrupted Elements Hydra",
+    CurrentValue = false,
+    Callback = function(Value)
+        states.autoSellCorrupted = Value
+    end,
+})
 
-local LabelAFKTimer = MiscTab:CreateLabel("Tempo Anti-AFK: 00h 00m 00s")
-local LabelSessionTimer = MiscTab:CreateLabel("Tempo de Sessão: 00h 00m 00s")
+-- TAB 2: MISC & GANHOS
+local MiscTab = Window:CreateTab("📊 Misc & Ganhos", 1228978229)
+
+MiscTab:CreateSection("Utilitários")
+
+MiscTab:CreateToggle({
+    Name = "🛡️ Anti-AFK (Evitar Desconexão)",
+    CurrentValue = false,
+    Callback = function(Value)
+        states.antiAFK = Value
+    end,
+})
+
+MiscTab:CreateSection("Estatísticas da Sessão")
+
 local LabelRebirths = MiscTab:CreateLabel("Rebirths Efetuados: 0")
-local LabelOpened = MiscTab:CreateLabel("Crystals Abertos: 0")
-local LabelSold = MiscTab:CreateLabel("Hydras Vendidas: 0")
+local LabelOpened = MiscTab:CreateLabel("Crystals 1 Abertos: 0")
+local LabelOpened2 = MiscTab:CreateLabel("Crystals 2 Abertos: 0")
+local LabelSold = MiscTab:CreateLabel("Darkstorm Hydras Vendidas: 0")
+local LabelSold2 = MiscTab:CreateLabel("Pegasus Vendidos: 0")
+local LabelSoldCorrupted = MiscTab:CreateLabel("Corrupted Hydras Vendidas: 0")
 local LabelPing = MiscTab:CreateLabel("Latência: 0 ms")
+
+MiscTab:CreateSection("Ações")
 
 MiscTab:CreateButton({
     Name = "Zerar Contadores",
     Callback = function()
         metrics.totalOpened = 0
+        metrics.totalOpened2 = 0
         metrics.totalSold = 0
+        metrics.totalSold2 = 0
+        metrics.totalSoldCorrupted = 0
         metrics.totalRebirths = 0
-        metrics.afkTime = 0
         LabelRebirths:Set("Rebirths Efetuados: 0")
-        LabelOpened:Set("Crystals Abertos: 0")
-        LabelSold:Set("Hydras Vendidas: 0")
-        LabelAFKTimer:Set("Tempo Anti-AFK: 00h 00m 00s")
+        LabelOpened:Set("Crystals 1 Abertos: 0")
+        LabelOpened2:Set("Crystals 2 Abertos: 0")
+        LabelSold:Set("Darkstorm Hydras Vendidas: 0")
+        LabelSold2:Set("Pegasus Vendidos: 0")
+        LabelSoldCorrupted:Set("Corrupted Hydras Vendidas: 0")
     end,
 })
 
--- =======================================================
--- EXECUÇÃO DOS WORKERS DE HIGH PERFORMANCE
--- =======================================================
+-- WORKERS
 
--- Prevenção Inatividade (Anti-AFK Event)
 player.Idled:Connect(function()
     if states.antiAFK then
         VirtualUser:Button2Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
@@ -205,48 +234,13 @@ player.Idled:Connect(function()
     end
 end)
 
--- Loop Ativo do Anti-AFK + Contador de Tempo
-task.spawn(function()
-    local afkCounter = 0
-    while true do
-        task.wait(1)
-        
-        -- Atualiza tempo de sessão global
-        metrics.sessionTime = metrics.sessionTime + 1
-        LabelSessionTimer:Set("Tempo de Sessão: " .. formatTime(metrics.sessionTime))
-        
-        -- Atualiza e executa Anti-AFK se ligado
-        if states.antiAFK then
-            metrics.afkTime = metrics.afkTime + 1
-            LabelAFKTimer:Set("Tempo Anti-AFK: " .. formatTime(metrics.afkTime))
-            
-            -- Envia entrada virtual a cada 60 segundos para evitar o desconexão do Roblox
-            afkCounter = afkCounter + 1
-            if afkCounter >= 60 then
-                afkCounter = 0
-                pcall(function()
-                    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Unknown, false, game)
-                    task.wait(0.1)
-                    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Unknown, false, game)
-                end)
-            end
-        else
-            afkCounter = 0
-        end
-    end
-end)
-
--- Medidor do Servidor (Ping)
 task.spawn(function()
     while task.wait(1) do
-        pcall(function()
-            local ping = math.floor(StatsService.Network.ServerStatsItem["Data Ping"]:GetValue())
-            LabelPing:Set("Latência: " .. tostring(ping) .. " ms")
-        end)
+        local ping = math.floor(StatsService.Network.ServerStatsItem["Data Ping"]:GetValue())
+        LabelPing:Set("Latência: " .. tostring(ping) .. " ms")
     end
 end)
 
--- Loop de Reps Instantâneo (Bypassing Animação de Ferramentas)
 task.spawn(function()
     while true do
         task.wait()
@@ -259,81 +253,78 @@ task.spawn(function()
     end
 end)
 
--- Loop de Auto Rebirth (Integração Direta com Mass Rebirth)
 task.spawn(function()
     while true do
         task.wait()
         if states.masterToggle and states.autoRebirth and rebirthRemote then
-            local executed = false
+            local success = false
             pcall(function()
-                local res = rebirthRemote:InvokeServer("massRebirthRequest", 500)
-                if res == true then
-                    metrics.totalRebirths = metrics.totalRebirths + 500
-                    executed = true
-                end
+                rebirthRemote:InvokeServer("massRebirthRequest", 500)
+                success = true
             end)
-            
-            if not executed then
+            if not success then
                 pcall(function()
-                    local res = rebirthRemote:InvokeServer("rebirthRequest")
-                    if res == true then
-                        metrics.totalRebirths = metrics.totalRebirths + 1
-                        executed = true
-                    end
+                    rebirthRemote:InvokeServer("rebirthRequest")
+                    success = true
                 end)
             end
-
-            if executed then
+            
+            if success then
+                metrics.totalRebirths = metrics.totalRebirths + 500
                 LabelRebirths:Set("Rebirths Efetuados: " .. tostring(metrics.totalRebirths))
             end
         end
     end
 end)
 
--- Loop Silencioso de Abertura de Cristais (Modo Fast-Open)
 task.spawn(function()
-    while true do
-        task.wait(0.05)
+    while task.wait(0.15) do
         if states.masterToggle and states.autoOpen and openRemote then
-            pcall(function()
-                local res = openRemote:InvokeServer("openCrystal", "Ultra Shockwave Crystal", states.openAmount)
-                if res then
-                    metrics.totalOpened = metrics.totalOpened + states.openAmount
-                    LabelOpened:Set("Crystals Abertos: " .. tostring(metrics.totalOpened))
-                end
-            end)
+            local args = { [1] = "openCrystal", [2] = "Unlimited Secrets Crystal", [3] = 1 }
+            local success = pcall(function() openRemote:InvokeServer(table.unpack(args)) end)
+            if success then
+                metrics.totalOpened = metrics.totalOpened + 1
+                LabelOpened:Set("Crystals 1 Abertos: " .. tostring(metrics.totalOpened))
+            end
         end
     end
 end)
 
--- Loop de Evolução Automática
+task.spawn(function()
+    while task.wait(0.15) do
+        if states.masterToggle and states.autoOpen2 and openRemote then
+            local success = pcall(function() openRemote:InvokeServer("openCrystal", "Ultra Shockwave Crystal", 1) end)
+            if success then
+                metrics.totalOpened2 = metrics.totalOpened2 + 1
+                LabelOpened2:Set("Crystals 2 Abertos: " .. tostring(metrics.totalOpened2))
+            end
+        end
+    end
+end)
+
 task.spawn(function()
     while task.wait(1) do
         if states.masterToggle and states.autoEvolve and autoEvolveRemote then
-            pcall(function()
-                autoEvolveRemote:InvokeServer()
-            end)
+            pcall(function() autoEvolveRemote:InvokeServer() end)
         end
     end
 end)
 
--- Loop de Venda de Pets Inutilizados
+-- Auto Sell 1
 task.spawn(function()
-    while task.wait(0.5) do
+    while task.wait(0.3) do
         if states.masterToggle and states.autoSell and sellPetEvent then
             pcall(function()
-                local petsFolder = player:FindFirstChild("petsFolder")
-                if petsFolder then
-                    for _, folder in ipairs(petsFolder:GetChildren()) do
-                        for _, pet in ipairs(folder:GetChildren()) do
-                            if pet.Name == "Corrupted Elements Hydra" then
-                                local isEquipped = pet:FindFirstChild("Equipped") or pet:FindFirstChild("isEquipped")
-                                if not (isEquipped and isEquipped.Value == true) then
-                                    sellPetEvent:FireServer("sellPet", pet)
-                                    metrics.totalSold = metrics.totalSold + 1
-                                    LabelSold:Set("Hydras Vendidas: " .. tostring(metrics.totalSold))
-                                    task.wait(0.05)
-                                end
+                local eliteFolder = player:FindFirstChild("petsFolder") and player.petsFolder:FindFirstChild("Elite")
+                if eliteFolder then
+                    for _, pet in ipairs(eliteFolder:GetChildren()) do
+                        if string.find(pet.Name, "Darkstorm Elemental Hydra") or (pet:IsA("StringValue") and string.find(pet.Value, "Darkstorm Elemental Hydra")) then
+                            local isEquipped = pet:FindFirstChild("Equipped") or pet:FindFirstChild("isEquipped")
+                            if not (isEquipped and isEquipped.Value == true) then
+                                sellPetEvent:FireServer("sellPet", pet)
+                                metrics.totalSold = metrics.totalSold + 1
+                                LabelSold:Set("Darkstorm Hydras Vendidas: " .. tostring(metrics.totalSold))
+                                task.wait(0.05)
                             end
                         end
                     end
@@ -342,3 +333,48 @@ task.spawn(function()
         end
     end
 end)
+
+-- Auto Sell 2
+task.spawn(function()
+    while task.wait(0.3) do
+        if states.masterToggle and states.autoSell2 and sellPetEvent then
+            pcall(function()
+                local eliteFolder = player:FindFirstChild("petsFolder") and player.petsFolder:FindFirstChild("Elite")
+                if eliteFolder then
+                    for _, pet in ipairs(eliteFolder:GetChildren()) do
+                        if string.find(pet.Name, "Golden Sun Pegasus") or (pet:IsA("StringValue") and string.find(pet.Value, "Golden Sun Pegasus")) then
+                            local isEquipped = pet:FindFirstChild("Equipped") or pet:FindFirstChild("isEquipped")
+                            if not (isEquipped and isEquipped.Value == true) then
+                                sellPetEvent:FireServer("sellPet", pet)
+                                metrics.totalSold2 = metrics.totalSold2 + 1
+                                LabelSold2:Set("Pegasus Vendidos: " .. tostring(metrics.totalSold2))
+                                task.wait(0.05)
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- Auto Sell 3 (Corrupted Elements Hydra)
+task.spawn(function()
+    while task.wait(0.3) do
+        if states.masterToggle and states.autoSellCorrupted and sellPetEvent then
+            pcall(function()
+                local pet = __getNil("Corrupted Elements Hydra", "StringValue")
+                if pet then
+                    local isEquipped = pet:FindFirstChild("Equipped") or pet:FindFirstChild("isEquipped")
+                    if not (isEquipped and isEquipped.Value == true) then
+                        sellPetEvent:FireServer("sellPet", pet)
+                        metrics.totalSoldCorrupted = metrics.totalSoldCorrupted + 1
+                        LabelSoldCorrupted:Set("Corrupted Hydras Vendidas: " .. tostring(metrics.totalSoldCorrupted))
+                        task.wait(0.05)
+                    end
+                end
+            end)
+        end
+    end
+end)
+
