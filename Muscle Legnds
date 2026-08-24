@@ -1,0 +1,428 @@
+local Event = game:GetService("Players").LocalPlayer.bodyMovementEvent
+Event:FireServer(
+    -0.25881907343864
+)
+
+
+local Event = game:GetService("Players").LocalPlayer.muscleEvent
+Event:FireServer(
+    "rep"
+)
+
+
+local Event = game:GetService("Players").LocalPlayer.muscleEvent
+firesignal(Event.OnClientEvent, 
+    "showStrength",
+    2.7367418507042e+24
+)
+
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+-- Serviços e Variáveis Globais
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local StatsService = game:GetService("Stats")
+local VirtualUser = game:GetService("VirtualUser")
+local HttpService = game:GetService("HttpService")
+
+-- Garante que o player carregue corretamente
+local player = nil
+repeat task.wait() player = Players.LocalPlayer until player
+
+-- Expira exatamente em 30/08/2026 às 22:12 UTC (7 dias a partir de hoje)
+local ExpirationTimestamp = 1788127952
+if os.time() > ExpirationTimestamp then
+    player:Kick("Sua Key expirou! A validade de 7 dias foi encerrada.")
+    return
+end
+
+-- Remotes
+local rEvents = ReplicatedStorage:WaitForChild("rEvents", 10)
+local openRemote = rEvents and rEvents:WaitForChild("openCrystalRemote", 10)
+local autoEvolveRemote = rEvents and rEvents:WaitForChild("autoEvolveRemote", 10)
+local sellPetEvent = rEvents and rEvents:WaitForChild("sellPetEvent", 10)
+local rebirthRemote = rEvents and rEvents:WaitForChild("rebirthRemote", 10)
+
+-- Função para buscar pets (Nil/Hidden)
+local function __getNil(name, class, debugId)
+    local okNil, nilInsts = pcall(getnilinstances)
+    if okNil and nilInsts then
+        for _, v in pairs(nilInsts) do
+            if v.ClassName==class and v.Name==name then return v end
+        end
+    end
+    return nil
+end
+
+-- Estados
+local states = {
+    masterToggle = false,
+    autoOpen1 = false,
+    autoOpen2 = false,
+    autoOpen3 = false,
+    autoEvolve = false,
+    autoSellDarkstorm = false,
+    autoSellPegasus = false,
+    autoSellMillenium = false,
+    autoSellCorrupted = false,
+    autoReps = false,
+    autoRebirth = false,
+    antiAFK = false,
+    autoEquipBest = true,
+    lockPosition = false
+}
+
+local metrics = {
+    totalSoldMillenium = 0,
+    totalSoldCorrupted = 0,
+    totalRebirths = 0
+}
+
+-- Tema visual: vermelho intenso / inspiração Sharingan
+local CrimsonTheme = {
+    TextColor = Color3.fromRGB(255, 235, 235),
+
+    Background = Color3.fromRGB(12, 2, 4),
+    Topbar = Color3.fromRGB(42, 4, 10),
+    Shadow = Color3.fromRGB(0, 0, 0),
+
+    NotificationBackground = Color3.fromRGB(28, 3, 7),
+    NotificationActionsBackground = Color3.fromRGB(235, 210, 210),
+
+    TabBackground = Color3.fromRGB(38, 4, 10),
+    TabStroke = Color3.fromRGB(95, 10, 22),
+    TabBackgroundSelected = Color3.fromRGB(190, 18, 30),
+    TabTextColor = Color3.fromRGB(230, 185, 185),
+    SelectedTabTextColor = Color3.fromRGB(255, 255, 255),
+
+    ElementBackground = Color3.fromRGB(28, 3, 7),
+    ElementBackgroundHover = Color3.fromRGB(58, 6, 14),
+    SecondaryElementBackground = Color3.fromRGB(18, 2, 5),
+    ElementStroke = Color3.fromRGB(95, 10, 22),
+    SecondaryElementStroke = Color3.fromRGB(60, 7, 15),
+
+    SliderBackground = Color3.fromRGB(90, 12, 20),
+    SliderProgress = Color3.fromRGB(220, 30, 30),
+    SliderStroke = Color3.fromRGB(255, 70, 70),
+
+    ToggleBackground = Color3.fromRGB(28, 3, 7),
+    ToggleEnabled = Color3.fromRGB(220, 30, 30),
+    ToggleDisabled = Color3.fromRGB(80, 15, 20),
+    ToggleEnabledStroke = Color3.fromRGB(255, 70, 70),
+    ToggleDisabledStroke = Color3.fromRGB(120, 40, 50),
+    ToggleEnabledOuterStroke = Color3.fromRGB(140, 12, 25),
+    ToggleDisabledOuterStroke = Color3.fromRGB(55, 8, 14),
+
+    DropdownSelected = Color3.fromRGB(60, 8, 16),
+    DropdownUnselected = Color3.fromRGB(30, 3, 7),
+
+    InputBackground = Color3.fromRGB(30, 3, 7),
+    InputStroke = Color3.fromRGB(95, 12, 25),
+    PlaceholderColor = Color3.fromRGB(190, 145, 145)
+}
+
+-- Janela Principal
+local Window = Rayfield:CreateWindow({
+    Name = "OWNER AFK PAID HUB",
+    LoadingTitle = "⚡ OWNER AFK PAID HUB",
+    LoadingSubtitle = "by Roblox Dev | Ultra Fast Edition",
+    ConfigurationSaving = { Enabled = false },
+    KeySystem = true,
+    KeySettings = {
+        Title = "OWNER AFK - Sistema de Key",
+        Subtitle = "Insira sua Key para acessar o Script",
+        FileName = "AFKKeySystem_v2",
+        SaveKey = false,
+        GrabKeyFromSite = false,
+        Key = {"AFK_842749"}
+    },
+    CustomImage = "rbxassetid://1228978229",
+    Theme = CrimsonTheme
+})
+
+-- TAB TELEPORT
+local TeleportTab = Window:CreateTab("🌀 Teleport", 1228978229)
+local selectedCrystal = "Ultra Shockwave Crystal"
+
+-- Coordenadas enviadas
+local coords = {
+    ["Ultra Shockwave Crystal"] = CFrame.new(-8429.61719, 7.86999989, -6202.23975),
+    ["Infinity Void Crystal"] = CFrame.new(-1055.31934, 22.2517738, -3558.48413),
+    ["Unlimited Secrets Crystal"] = CFrame.new(110.437202, 3.69999099, -775.882019)
+}
+
+TeleportTab:CreateDropdown({
+    Name = "Teleport Zone | Crystal",
+    Options = {
+        "Ultra Shockwave Crystal",
+        "Infinity Void Crystal",
+        "Unlimited Secrets Crystal"
+    },
+    CurrentOption = "Ultra Shockwave Crystal",
+    MultipleOptions = false,
+    Callback = function(Option)
+        if type(Option) == "table" then
+            selectedCrystal = Option[1]
+        else
+            selectedCrystal = Option
+        end
+    end
+})
+
+TeleportTab:CreateButton({
+    Name = "Teleport",
+    Callback = function()
+        local char = player.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        
+        if hrp and coords[selectedCrystal] then
+            hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+            hrp.CFrame = coords[selectedCrystal]
+        end
+    end
+})
+
+-- Fundo visual opcional
+task.spawn(function()
+    task.wait(0.5)
+
+    local gui = game:GetService("CoreGui"):FindFirstChild("Rayfield") or player.PlayerGui:FindFirstChild("Rayfield")
+    if not gui then return end
+
+    local main = gui:FindFirstChild("Main")
+    if not main or not main:IsA("GuiObject") then return end
+
+    local ok, imageAsset = pcall(function()
+        if type(getcustomasset) ~= "function" then return nil end
+        return getcustomasset("1000122085.jpg")
+    end)
+
+    if not ok or not imageAsset then return end
+
+    local existing = main:FindFirstChild("CharacterBackground")
+    if existing then existing:Destroy() end
+
+    local background = Instance.new("ImageLabel")
+    background.Name = "CharacterBackground"
+    background.BackgroundTransparency = 1
+    background.BorderSizePixel = 0
+    background.Size = UDim2.new(1, 0, 1, 0)
+    background.Position = UDim2.new(0, 0, 0, 0)
+    background.Image = imageAsset
+    background.ImageTransparency = 0.42
+    background.ScaleType = Enum.ScaleType.Crop
+    background.Active = false
+    background.Selectable = false
+    background.ZIndex = 0
+    background.Parent = main
+
+    main.BackgroundTransparency = 0.28
+end)
+
+task.spawn(function()
+    while true do
+        task.wait(0.3)
+        local gui = game:GetService("CoreGui"):FindFirstChild("Rayfield") or player.PlayerGui:FindFirstChild("Rayfield")
+        if gui then
+            for _, v in ipairs(gui:GetDescendants()) do
+                if v:IsA("Frame") and v.Name == "Toggle" then
+                    local color = v.BackgroundColor3
+                    local isNativeAccent = color == Color3.fromRGB(0, 146, 214)
+                        or color == Color3.fromRGB(50, 138, 220)
+                        or color == Color3.fromRGB(0, 170, 255)
+                    if isNativeAccent then
+                        v.BackgroundColor3 = Color3.fromRGB(220, 30, 30)
+                    end
+                end
+            end
+        end
+    end
+end)
+
+-- TAB 1: FARMING
+local FarmTab = Window:CreateTab("🌾 Opções de Farm", 1228978229)
+FarmTab:CreateToggle({ Name = "⚡ Ativar Sistema Geral", Callback = function(V) states.masterToggle = V end })
+
+FarmTab:CreateSection("Automações de Treino")
+FarmTab:CreateToggle({ Name = "🏋️ Auto Lift / Reps", Callback = function(V) states.autoReps = V end })
+FarmTab:CreateToggle({ Name = "🎒 Equipar Melhores Tools (Handstands/Situps)", CurrentValue = true, Callback = function(V) states.autoEquipBest = V end })
+FarmTab:CreateToggle({ Name = "🔄 Auto Rebirth (500x Fast)", Callback = function(V) states.autoRebirth = V end })
+
+FarmTab:CreateSection("Automações de Cristais")
+FarmTab:CreateToggle({ Name = "🥚 Abrir Unlimited Secrets", Callback = function(V) states.autoOpen1 = V end })
+FarmTab:CreateToggle({ Name = "🥚 Abrir Ultra Shockwave", Callback = function(V) states.autoOpen2 = V end })
+FarmTab:CreateToggle({ Name = "🥚 Abrir Infinity Void Crystal", Callback = function(V) states.autoOpen3 = V end })
+FarmTab:CreateToggle({ Name = "🧬 Auto Evoluir Pets", Callback = function(V) states.autoEvolve = V end })
+
+FarmTab:CreateSection("Automações de Venda")
+FarmTab:CreateToggle({ Name = "🔥 Vender Darkstorm Elemental Hydra", Callback = function(V) states.autoSellDarkstorm = V end })
+FarmTab:CreateToggle({ Name = "🔥 Vender Golden Sun Pegasus", Callback = function(V) states.autoSellPegasus = V end })
+FarmTab:CreateToggle({ Name = "🔥 Vender Rising Millenium Hydra", Callback = function(V) states.autoSellMillenium = V end })
+FarmTab:CreateToggle({ Name = "🔥 Vender Corrupted Elements Hydra", Callback = function(V) states.autoSellCorrupted = V end })
+
+-- TAB 2: MISC
+local MiscTab = Window:CreateTab("📊 Misc & Ganhos", 1228978229)
+MiscTab:CreateToggle({ Name = "🛡️ Anti-AFK", Callback = function(V) states.antiAFK = V end })
+MiscTab:CreateToggle({ Name = "🔒 Freeze / Lock Position (Congelar Posição)", Callback = function(V) 
+    states.lockPosition = V
+    local char = player.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        char.HumanoidRootPart.Anchored = V
+    end
+end })
+
+local LabelRebirths = MiscTab:CreateLabel("Rebirths Realizados: 0")
+local LabelSoldMillenium = MiscTab:CreateLabel("Millenium Hydras Vendidas: 0")
+local LabelSoldCorrupted = MiscTab:CreateLabel("Corrupted Hydras Vendidas: 0")
+
+MiscTab:CreateButton({ Name = "Zerar Contadores", Callback = function() 
+    metrics.totalSoldMillenium = 0; LabelSoldMillenium:Set("Millenium Hydras Vendidas: 0")
+    metrics.totalSoldCorrupted = 0; LabelSoldCorrupted:Set("Corrupted Hydras Vendidas: 0")
+    metrics.totalRebirths = 0; LabelRebirths:Set("Rebirths Realizados: 0")
+end })
+
+-- WORKERS
+
+-- Anti-AFK
+player.Idled:Connect(function() 
+    if states.antiAFK then 
+        VirtualUser:Button2Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame) 
+        task.wait(1) 
+        VirtualUser:Button2Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame) 
+    end 
+end)
+
+-- Mantém a Posição Congelada caso o Personagem Respawne
+player.CharacterAdded:Connect(function(char)
+    task.wait(1)
+    if states.lockPosition and char:FindFirstChild("HumanoidRootPart") then
+        char.HumanoidRootPart.Anchored = true
+    end
+end)
+
+-- Função de Seleção e Equipamento das Ferramentas Especificadas
+local function equipBestTool()
+    local backpack = player:FindFirstChild("Backpack")
+    local character = player.Character
+    if backpack and character then
+        for _, tool in ipairs(backpack:GetChildren()) do
+            if tool:IsA("Tool") then
+                local toolName = tool.Name
+                if toolName == "Handstands" or toolName == "Situps" or toolName:find("Weight") or toolName:find("Haltere") or toolName:find("Pushups") then
+                    character.Humanoid:EquipTool(tool)
+                    break
+                end
+            end
+        end
+    end
+end
+
+-- Auto Lift/Reps com suporte completo a Handstands e Situps
+task.spawn(function()
+    while true do
+        if states.masterToggle and states.autoReps then
+            if states.autoEquipBest then
+                equipBestTool()
+            end
+            
+            local remote = player:FindFirstChild("muscleEvent") or ReplicatedStorage:FindFirstChild("muscleEvent")
+            if remote then 
+                local char = player.Character
+                
+                remote:FireServer("rep")
+                
+                if char and char:FindFirstChild("Handstands") then
+                    remote:FireServer("rep", char.Handstands)
+                    firesignal(remote.OnClientEvent, "showStrength", 2.8291922422884e+24)
+                end
+                
+                if char and char:FindFirstChild("Situps") then
+                    remote:FireServer("rep", char.Situps)
+                    firesignal(remote.OnClientEvent, "showStrength", 2.8291922422885e+24)
+                end
+            end
+        end
+        task.wait(0.05)
+    end
+end)
+
+-- Auto Rebirth FAST (Múltiplas requisições paralelas de 500)
+task.spawn(function()
+    while true do
+        if states.masterToggle and states.autoRebirth and rebirthRemote then
+            for _ = 1, 8 do
+                task.spawn(function()
+                    local res = table.pack(pcall(function() 
+                        return rebirthRemote:InvokeServer("massRebirthRequest", 500) 
+                    end))
+                    
+                    if res[1] and res[2] then
+                        metrics.totalRebirths += 500
+                        LabelRebirths:Set("Rebirths Realizados: " .. metrics.totalRebirths)
+                    end
+                end)
+            end
+        end
+        task.wait(0.02)
+    end
+end)
+
+-- Auto Open Crystals
+task.spawn(function()
+    while true do
+        task.wait(0.15)
+        if states.masterToggle and openRemote then
+            if states.autoOpen1 then openRemote:InvokeServer("openCrystal", "Unlimited Secrets Crystal", 1) end
+            if states.autoOpen2 then openRemote:InvokeServer("openCrystal", "Ultra Shockwave Crystal", 1) end
+            if states.autoOpen3 then openRemote:InvokeServer("openCrystal", "Infinity Void Crystal", 1) end
+        end
+    end
+end)
+
+-- Auto Evolve
+task.spawn(function()
+    while true do
+        task.wait(2)
+        if states.masterToggle and states.autoEvolve and autoEvolveRemote then
+            pcall(function() autoEvolveRemote:InvokeServer() end)
+        end
+    end
+end)
+
+-- Auto Sell Loop
+task.spawn(function()
+    while true do
+        task.wait(0.5)
+        if states.masterToggle and sellPetEvent then
+            local elite = player:FindFirstChild("petsFolder") and player.petsFolder:FindFirstChild("Elite")
+            if elite then
+                for _, pet in ipairs(elite:GetChildren()) do
+                    local isEquipped = pet:FindFirstChild("Equipped") or pet:FindFirstChild("isEquipped")
+                    if not (isEquipped and isEquipped.Value == true) then
+                        if states.autoSellDarkstorm and string.find(pet.Name, "Darkstorm Elemental Hydra") then
+                            sellPetEvent:FireServer("sellPet", pet)
+                        end
+                        if states.autoSellPegasus and string.find(pet.Name, "Golden Sun Pegasus") then
+                            sellPetEvent:FireServer("sellPet", pet)
+                        end
+                        if states.autoSellMillenium and string.find(pet.Name, "Rising Millenium Hydra") then
+                            sellPetEvent:FireServer("sellPet", pet)
+                            metrics.totalSoldMillenium += 1
+                            LabelSoldMillenium:Set("Millenium Hydras Vendidas: " .. metrics.totalSoldMillenium)
+                        end
+                    end
+                end
+            end
+            
+            if states.autoSellCorrupted then
+                local pet = __getNil("Corrupted Elements Hydra", "StringValue")
+                if pet then
+                    sellPetEvent:FireServer("sellPet", pet)
+                    metrics.totalSoldCorrupted += 1
+                    LabelSoldCorrupted:Set("Corrupted Hydras Vendidas: " .. metrics.totalSoldCorrupted)
+                end
+            end
+        end
+    end
+end)
+
