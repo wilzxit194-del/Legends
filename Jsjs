@@ -1,0 +1,592 @@
+repeat task.wait() until game:IsLoaded()
+
+-- Loading WindUI
+local success, WindUI = pcall(function()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
+end)
+
+if not success or not WindUI then
+    warn("[OWNER AFK PAID] Failed to load WindUI interface.")
+    return
+end
+
+-- Adiciona o Tema Azul
+WindUI:AddTheme({
+    Name = "BlueTheme",
+    Accent = Color3.fromRGB(45, 140, 255),        -- Azul vibrante
+    Outline = Color3.fromRGB(25, 95, 190),         -- Contorno azul
+    Text = Color3.fromRGB(220, 235, 255),         -- Texto azul claro
+    PlaceholderText = Color3.fromRGB(120, 165, 215),
+    Background = Color3.fromRGB(6, 12, 24),       -- Fundo escuro azulado
+    Header = Color3.fromRGB(8, 22, 44),          -- Cabeçalho azul
+})
+
+local Window = WindUI:CreateWindow({
+    Title = "🌊 OWNER AFK PAID",
+    Icon = "crown",
+    Author = "By AFK Paid",
+    Folder = "OwnerAFKPaidConfig",
+    Size = UDim2.fromOffset(600, 470),
+    Transparent = true,
+    Theme = "BlueTheme",
+})
+
+-- Aplicação correta do tema após a criação da janela
+WindUI:SetTheme("BlueTheme")
+
+-- Adicionando o perfil de forma segura usando o rodapé / notificação de boas-vindas personalizada
+local Players = game:GetService("Players")
+local localPlayer = Players.LocalPlayer
+
+pcall(function()
+    Window:UserProfile({
+        Name = localPlayer.Name,
+        Image = "rbxthumb://type=AvatarHeadShot&id=" .. localPlayer.UserId .. "&w=420&h=420",
+    })
+end)
+
+-- Perfil visual adicional do jogador no lado esquerdo do título do menu
+pcall(function()
+    local CoreGui = game:GetService("CoreGui")
+    local RunService = game:GetService("RunService")
+
+    local profileGui = Instance.new("ScreenGui")
+    profileGui.Name = "OwnerAFK_PlayerProfile"
+    profileGui.ResetOnSpawn = false
+    profileGui.IgnoreGuiInset = true
+    profileGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    profileGui.Parent = CoreGui
+
+    local profileFrame = Instance.new("Frame")
+    profileFrame.Name = "PlayerProfile"
+    profileFrame.Size = UDim2.fromOffset(136, 42)
+    profileFrame.BackgroundColor3 = Color3.fromRGB(8, 22, 44)
+    profileFrame.BackgroundTransparency = 0.08
+    profileFrame.BorderSizePixel = 0
+    profileFrame.Visible = false
+    profileFrame.Parent = profileGui
+
+    local profileCorner = Instance.new("UICorner")
+    profileCorner.CornerRadius = UDim.new(0, 8)
+    profileCorner.Parent = profileFrame
+
+    local profileStroke = Instance.new("UIStroke")
+    profileStroke.Color = Color3.fromRGB(25, 95, 190)
+    profileStroke.Thickness = 1
+    profileStroke.Transparency = 0.15
+    profileStroke.Parent = profileFrame
+
+    local avatar = Instance.new("ImageLabel")
+    avatar.Name = "Skin"
+    avatar.Size = UDim2.fromOffset(34, 34)
+    avatar.Position = UDim2.fromOffset(4, 4)
+    avatar.BackgroundTransparency = 1
+    avatar.Image = "rbxthumb://type=AvatarHeadShot&id=" .. localPlayer.UserId .. "&w=420&h=420"
+    avatar.Parent = profileFrame
+
+    local avatarCorner = Instance.new("UICorner")
+    avatarCorner.CornerRadius = UDim.new(1, 0)
+    avatarCorner.Parent = avatar
+
+    local username = Instance.new("TextLabel")
+    username.Name = "Username"
+    username.Size = UDim2.new(1, -46, 1, 0)
+    username.Position = UDim2.fromOffset(44, 0)
+    username.BackgroundTransparency = 1
+    username.Text = localPlayer.Name
+    username.TextColor3 = Color3.fromRGB(220, 235, 255)
+    username.TextSize = 13
+    username.Font = Enum.Font.GothamSemibold
+    username.TextXAlignment = Enum.TextXAlignment.Left
+    username.TextTruncate = Enum.TextTruncate.AtEnd
+    username.Parent = profileFrame
+
+    local titleLabel
+    local function findTitleLabel()
+        for _, object in ipairs(CoreGui:GetDescendants()) do
+            if object:IsA("TextLabel") and string.find(string.upper(object.Text), "OWNER AFK PAID", 1, true) then
+                return object
+            end
+        end
+    end
+
+    task.spawn(function()
+        for _ = 1, 100 do
+            titleLabel = findTitleLabel()
+            if titleLabel then
+                break
+            end
+            task.wait(0.1)
+        end
+    end)
+
+    RunService.RenderStepped:Connect(function()
+        if not profileGui.Parent then
+            return
+        end
+
+        if not titleLabel or not titleLabel.Parent then
+            titleLabel = findTitleLabel()
+        end
+
+        if titleLabel and titleLabel.Visible then
+            local titlePosition = titleLabel.AbsolutePosition
+            profileFrame.Position = UDim2.fromOffset(
+                math.max(4, titlePosition.X - profileFrame.AbsoluteSize.X - 8),
+                titlePosition.Y + math.max(0, (titleLabel.AbsoluteSize.Y - profileFrame.AbsoluteSize.Y) / 2)
+            )
+            profileFrame.Visible = true
+        else
+            profileFrame.Visible = false
+        end
+    end)
+end)
+
+-- Tabs
+local FarmTab = Window:Tab({ Title = "🏋️ Farm", Icon = "dumbbell" })
+local EggsTab = Window:Tab({ Title = "🥚 Eggs & Pets", Icon = "egg" })
+local MiscTab = Window:Tab({ Title = "⚙️ Misc", Icon = "sliders" })
+
+-- ==================== FARM TAB ====================
+local FarmSection = FarmTab:Section({ Title = "🏋️‍♂️ Lift Weight Fast" })
+
+local autoLiftWeight = false
+
+FarmSection:Toggle({
+    Title = "⚡ Lift Weight Fast",
+    Desc = "Automatically lifts weights at ultra speed",
+    Value = false,
+    Callback = function(Value)
+        autoLiftWeight = Value
+        task.spawn(function()
+            local player = game:GetService("Players").LocalPlayer
+            while autoLiftWeight do
+                pcall(function()
+                    local muscleEvent = player:FindFirstChild("muscleEvent")
+                    local character = player.Character
+                    local weight = character and character:FindFirstChild("Weight")
+                    
+                    if muscleEvent and weight then
+                        muscleEvent:FireServer("rep", weight)
+                    end
+                end)
+                task.wait()
+            end
+        end)
+    end
+})
+
+-- ==================== EGGS & PETS TAB ====================
+local EggsSection = EggsTab:Section({ Title = "🥚 Crystal Openers" })
+
+local autoOpenMasters = false
+local autoOpenRibs = false
+local safePlatform = nil
+local noclipConnection = nil
+
+-- Função de suporte para gerenciar a plataforma subterrânea e o noclip
+local function updatePlatformAndNoclip()
+    local shouldBeActive = autoOpenMasters or autoOpenRibs
+    local RunService = game:GetService("RunService")
+    local players = game:GetService("Players")
+    local player = players.LocalPlayer
+    
+    if shouldBeActive then
+        if not noclipConnection then
+            noclipConnection = RunService.Stepped:Connect(function()
+                local char = player.Character
+                if char then
+                    for _, part in ipairs(char:GetDescendants()) do
+                        if part:IsA("BasePart") then
+                            part.CanCollide = false
+                        end
+                    end
+                end
+            end)
+        end
+    else
+        if not autoOpenMasters and not autoOpenRibs then
+            if noclipConnection then
+                noclipConnection:Disconnect()
+                noclipConnection = nil
+            end
+            if safePlatform then
+                safePlatform:Destroy()
+                safePlatform = nil
+            end
+        end
+    end
+end
+
+EggsSection:Toggle({
+    Title = "🐣 Auto Open 10x - Insufficient Masters Crystal",
+    Desc = "Opens 10x Insufficient Masters Crystal simultaneously",
+    Value = false,
+    Callback = function(Value)
+        autoOpenMasters = Value
+        updatePlatformAndNoclip()
+        
+        local players = game:GetService("Players")
+        local player = players.LocalPlayer
+        local replicatedStorage = game:GetService("ReplicatedStorage")
+        
+        if autoOpenMasters then
+            task.spawn(function()
+                local crystalsFolder = workspace:FindFirstChild("crystalsFolder") or workspace:FindFirstChild("worldCrystals") or workspace
+                local targetCrystal = nil
+                
+                for _, obj in ipairs(crystalsFolder:GetDescendants()) do
+                    if obj.Name == "Insufficient Masters Crystal" and (obj:IsA("Model") or obj:IsA("BasePart")) then
+                        if obj:IsA("Model") then
+                            targetCrystal = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
+                        else
+                            targetCrystal = obj
+                        end
+                        break
+                    end
+                end
+                
+                if targetCrystal and (not safePlatform or not safePlatform.Parent) then
+                    safePlatform = Instance.new("Part")
+                    safePlatform.Name = "OwnerAFK_GrayPlatform"
+                    safePlatform.Size = Vector3.new(30, 1, 30)
+                    safePlatform.Anchored = true
+                    safePlatform.CanCollide = true
+                    safePlatform.Transparency = 0
+                    safePlatform.BrickColor = BrickColor.new("Medium stone grey")
+                    safePlatform.Position = targetCrystal.Position - Vector3.new(0, 60, 0)
+                    safePlatform.Parent = workspace
+                end
+                
+                local character = player.Character
+                local hrp = character and character:FindFirstChild("HumanoidRootPart")
+                if hrp and safePlatform then
+                    hrp.CFrame = safePlatform.CFrame + Vector3.new(0, 4, 0)
+                end
+                
+                while autoOpenMasters do
+                    pcall(function()
+                        local rEvents = replicatedStorage:FindFirstChild("rEvents")
+                        local openBatchRemote = rEvents and rEvents:FindFirstChild("openCrystalRemote")
+                        
+                        if openBatchRemote then
+                            openBatchRemote:InvokeServer("openCrystalBatch", "Insufficient Masters Crystal", 10)
+                        end
+                    end)
+                    task.wait(0.15)
+                end
+            end)
+        end
+    end
+})
+
+EggsSection:Toggle({
+    Title = "🐣 Auto Open 10x - RIBS Secret Crystal",
+    Desc = "Opens 10x RIBS Secret Crystal simultaneously",
+    Value = false,
+    Callback = function(Value)
+        autoOpenRibs = Value
+        updatePlatformAndNoclip()
+        
+        local players = game:GetService("Players")
+        local player = players.LocalPlayer
+        local replicatedStorage = game:GetService("ReplicatedStorage")
+        
+        if autoOpenRibs then
+            task.spawn(function()
+                local crystalsFolder = workspace:FindFirstChild("crystalsFolder") or workspace:FindFirstChild("worldCrystals") or workspace
+                local targetCrystal = nil
+                
+                for _, obj in ipairs(crystalsFolder:GetDescendants()) do
+                    if obj.Name == "RIBS Secret Crystal" and (obj:IsA("Model") or obj:IsA("BasePart")) then
+                        if obj:IsA("Model") then
+                            targetCrystal = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
+                        else
+                            targetCrystal = obj
+                        end
+                        break
+                    end
+                end
+                
+                if targetCrystal and (not safePlatform or not safePlatform.Parent) then
+                    safePlatform = Instance.new("Part")
+                    safePlatform.Name = "OwnerAFK_GrayPlatform"
+                    safePlatform.Size = Vector3.new(30, 1, 30)
+                    safePlatform.Anchored = true
+                    safePlatform.CanCollide = true
+                    safePlatform.Transparency = 0
+                    safePlatform.BrickColor = BrickColor.new("Medium stone grey")
+                    safePlatform.Position = targetCrystal.Position - Vector3.new(0, 60, 0)
+                    safePlatform.Parent = workspace
+                end
+                
+                local character = player.Character
+                local hrp = character and character:FindFirstChild("HumanoidRootPart")
+                if hrp and safePlatform then
+                    hrp.CFrame = safePlatform.CFrame + Vector3.new(0, 4, 0)
+                end
+                
+                while autoOpenRibs do
+                    pcall(function()
+                        local rEvents = replicatedStorage:FindFirstChild("rEvents")
+                        local openBatchRemote = rEvents and rEvents:FindFirstChild("openCrystalRemote")
+                        
+                        if openBatchRemote then
+                            openBatchRemote:InvokeServer("openCrystalBatch", "RIBS Secret Crystal", 10)
+                        end
+                    end)
+                    task.wait(0.15)
+                end
+            end)
+        end
+    end
+})
+
+local PetsSection = EggsTab:Section({ Title = "🎯 Auto Sell Total By Name" })
+
+local targetPetNames = {
+    ["Frostwave Pegasus"] = true,
+    ["White Pheonix"] = true,
+    ["Underworld Duo Dragon"] = true,
+    ["Ultranova"] = true
+}
+
+PetsSection:Toggle({
+    Title = "🐴 Frostwave Pegasus",
+    Desc = "Sell ALL Frostwave Pegasus pets",
+    Value = true,
+    Callback = function(v) targetPetNames["Frostwave Pegasus"] = v end
+})
+
+PetsSection:Toggle({
+    Title = "🦅 White Pheonix",
+    Desc = "Sell ALL White Pheonix pets",
+    Value = true,
+    Callback = function(v) targetPetNames["White Pheonix"] = v end
+})
+
+PetsSection:Toggle({
+    Title = "🐉 Underworld Duo Dragon",
+    Desc = "Sell ALL Underworld Duo Dragon pets",
+    Value = true,
+    Callback = function(v) targetPetNames["Underworld Duo Dragon"] = v end
+})
+
+PetsSection:Toggle({
+    Title = "🌟 Ultranova",
+    Desc = "Sell ALL Ultranova pets",
+    Value = true,
+    Callback = function(v) targetPetNames["Ultranova"] = v end
+})
+
+local autoSellByName = false
+
+PetsSection:Toggle({
+    Title = "🔥 Enable Auto Sell Total (Marked Names Only)",
+    Desc = "Sells inventory pets matching the names above",
+    Value = false,
+    Callback = function(Value)
+        autoSellByName = Value
+        task.spawn(function()
+            local replicatedStorage = game:GetService("ReplicatedStorage")
+            local player = game:GetService("Players").LocalPlayer
+            
+            while autoSellByName do
+                pcall(function()
+                    local rEvents = replicatedStorage:FindFirstChild("rEvents") or replicatedStorage:FindFirstChild("vEvents")
+                    local sellRemote = rEvents and rEvents:FindFirstChild("sellPetEvent")
+                    
+                    if sellRemote then
+                        local petsFolder = player:FindFirstChild("petsFolder") or player:FindFirstChild("pets")
+                        if petsFolder then
+                            
+                            local function processPet(pet)
+                                local isEquipped = false
+                                if pet:FindFirstChild("equipped") and pet.equipped.Value == true then
+                                    isEquipped = true
+                                elseif pet:FindFirstChild("Equipped") and pet.Equipped.Value == true then
+                                    isEquipped = true
+                                end
+
+                                if not isEquipped then
+                                    local petName = pet.Name
+                                    
+                                    for targetName, enabled in pairs(targetPetNames) do
+                                        if enabled and (petName == targetName or string.find(petName:lower(), targetName:lower())) then
+                                            sellRemote:FireServer("sellPet", pet)
+                                            task.wait(0.02)
+                                            break
+                                        end
+                                    end
+                                end
+                            end
+
+                            local function scanContainer(container)
+                                local successScan, err = pcall(function()
+                                    for _, child in ipairs(container:GetChildren()) do
+                                        if child:IsA("Folder") then
+                                            scanContainer(child)
+                                        else
+                                            processPet(child)
+                                        end
+                                    end
+                                end)
+                            end
+
+                            scanContainer(petsFolder)
+                        end
+                    end
+                end)
+                task.wait(0.3)
+            end
+        end)
+    end
+})
+
+-- ==================== AUTO EVOLVE ====================
+local EvolveSection = EggsTab:Section({ Title = "🧬 Auto Evolve" })
+
+local evolvePetName = "GLITCH: Awakened Nighthunter"
+local autoEvolve = false
+
+EvolveSection:Input({
+    Title = "📝 Pet Name to Evolve",
+    Desc = "Type the exact name of the pet",
+    Value = "GLITCH: Awakened Nighthunter",
+    Placeholder = "Ex: GLITCH: Awakened Nighthunter",
+    Callback = function(text)
+        if text and text ~= "" then
+            evolvePetName = text
+        end
+    end
+})
+
+EvolveSection:Toggle({
+    Title = "🧬 Enable Auto Evolve",
+    Desc = "Continuously evolves the specified pet",
+    Value = false,
+    Callback = function(Value)
+        autoEvolve = Value
+        task.spawn(function()
+            local replicatedStorage = game:GetService("ReplicatedStorage")
+            while autoEvolve do
+                pcall(function()
+                    local rEvents = replicatedStorage:FindFirstChild("rEvents")
+                    local evolveEvent = rEvents and rEvents:FindFirstChild("petEvolveEvent")
+                    
+                    if evolveEvent then
+                        evolveEvent:FireServer("evolvePet", evolvePetName)
+                    end
+                end)
+                task.wait(0.1)
+            end
+        end)
+    end
+})
+
+-- ==================== MISC TAB ====================
+local MiscSection = MiscTab:Section({ Title = "⚙️ Utilities" })
+
+-- Low Graphics / FPS Boost Toggle
+MiscSection:Toggle({
+    Title = "📉 Low Graphics / FPS Boost",
+    Desc = "Removes shadows, particles and lowers quality to fix lag",
+    Value = false,
+    Callback = function(Value)
+        pcall(function()
+            local lighting = game:GetService("Lighting")
+            local terrain = workspace:FindFirstChildOfClass("Terrain")
+            
+            if Value then
+                settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+                lighting.GlobalShadows = false
+                lighting.FogEnd = 9e9
+                if terrain then
+                    terrain.WaterWaveSize = 0
+                    terrain.WaterWaveSpeed = 0
+                    terrain.WaterReflectance = 0
+                    terrain.WaterTransparency = 0
+                end
+                for _, v in ipairs(workspace:GetDescendants()) do
+                    if v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Fire") or v:IsA("Smoke") or v:IsA("Sparkles") then
+                        v.Enabled = false
+                    elseif v:IsA("BasePart") then
+                        v.Material = Enum.Material.SmoothPlastic
+                    end
+                end
+            else
+                settings().Rendering.QualityLevel = Enum.QualityLevel.Automatic
+                lighting.GlobalShadows = true
+            end
+        end)
+    end
+})
+
+-- Perfect Lock / Freeze at Current Position
+local freezeEnabled = false
+local frozenCFrame = nil
+local freezeConnection = nil
+
+MiscSection:Toggle({
+    Title = "❄️ Lock / Freeze (Lock Current Position)",
+    Desc = "Freezes your character right where you are without falling",
+    Value = false,
+    Callback = function(Value)
+        freezeEnabled = Value
+        local player = game:GetService("Players").LocalPlayer
+        
+        if freezeEnabled then
+            local char = player.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                frozenCFrame = hrp.CFrame
+            end
+            
+            freezeConnection = game:GetService("RunService").Heartbeat:Connect(function()
+                local currentCharacter = player.Character
+                local currentHrp = currentCharacter and currentCharacter:FindFirstChild("HumanoidRootPart")
+                if currentHrp and frozenCFrame then
+                    currentHrp.CFrame = frozenCFrame
+                    currentHrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                    currentHrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+                end
+            end)
+        else
+            if freezeConnection then
+                freezeConnection:Disconnect()
+                freezeConnection = nil
+            end
+            frozenCFrame = nil
+        end
+    end
+})
+
+local antiAfkEnabled = false
+local antiAfkConnection
+
+MiscSection:Toggle({
+    Title = "💤 Anti AFK",
+    Desc = "Prevents disconnection due to inactivity",
+    Value = false,
+    Callback = function(Value)
+        antiAfkEnabled = Value
+        if antiAfkEnabled then
+            local VirtualUser = game:GetService("VirtualUser")
+            antiAfkConnection = game:GetService("Players").LocalPlayer.Idled:Connect(function()
+                VirtualUser:CaptureController()
+                VirtualUser:ClickButton2(Vector2.new())
+            end)
+        else
+            if antiAfkConnection then
+                antiAfkConnection:Disconnect()
+                antiAfkConnection = nil
+            end
+        end
+    end
+})
+
+WindUI:Notify({
+    Title = "OWNER AFK PAID",
+    Content = "Welcome, " .. localPlayer.Name .. "!",
+    Duration = 3
+})
