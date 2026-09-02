@@ -1,0 +1,729 @@
+repeat task.wait() until game:IsLoaded()
+
+-- ==================== DEBUG ====================
+local function DebugInfo(message)
+    print("[OWNER AFK PAID][INFO] " .. tostring(message))
+end
+
+local function DebugWarn(message)
+    warn("[OWNER AFK PAID][WARN] " .. tostring(message))
+end
+
+local function DebugError(message, err)
+    warn("[OWNER AFK PAID][ERROR] " .. tostring(message) .. " | " .. tostring(err))
+end
+
+-- ==================== LOADING WINDUI ====================
+local success, WindUI = pcall(function()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
+end)
+
+if not success or not WindUI then
+    warn("[OWNER AFK PAID] Failed to load WindUI interface.")
+    return
+end
+
+DebugInfo("WindUI loaded successfully.")
+
+-- ==================== THEME ====================
+WindUI:AddTheme({
+    Name = "PurpleTheme",
+    Accent = Color3.fromRGB(170, 85, 255),
+    Outline = Color3.fromRGB(130, 60, 210),
+    Text = Color3.fromRGB(235, 220, 255),
+    PlaceholderText = Color3.fromRGB(155, 120, 190),
+    Background = Color3.fromRGB(10, 8, 16),
+    Header = Color3.fromRGB(18, 10, 28),
+})
+
+local Window = WindUI:CreateWindow({
+    Title = "🌊 OWNER AFK PAID [OPTIMIZED]",
+    Icon = "crown",
+    Author = "By AFK Paid",
+    Folder = "OwnerAFKPaidConfig",
+    Size = UDim2.fromOffset(600, 470),
+    Transparent = true,
+    Theme = "PurpleTheme",
+})
+
+WindUI:SetTheme("PurpleTheme")
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local localPlayer = Players.LocalPlayer
+
+pcall(function()
+    Window:UserProfile({
+        Name = localPlayer.Name,
+        Image = "rbxthumb://type=AvatarHeadShot&id=" .. localPlayer.UserId .. "&w=420&h=420",
+    })
+end)
+
+-- ==================== PLAYER PROFILE ====================
+pcall(function()
+    local CoreGui = game:GetService("CoreGui")
+
+    local oldProfile = CoreGui:FindFirstChild("OwnerAFK_PlayerProfile")
+    if oldProfile then
+        oldProfile:Destroy()
+    end
+
+    local profileGui = Instance.new("ScreenGui")
+    profileGui.Name = "OwnerAFK_PlayerProfile"
+    profileGui.ResetOnSpawn = false
+    profileGui.IgnoreGuiInset = true
+    profileGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    profileGui.Parent = CoreGui
+
+    local profileFrame = Instance.new("Frame")
+    profileFrame.Name = "PlayerProfile"
+    profileFrame.Size = UDim2.fromOffset(136, 42)
+    profileFrame.BackgroundColor3 = Color3.fromRGB(18, 10, 28)
+    profileFrame.BackgroundTransparency = 0.08
+    profileFrame.BorderSizePixel = 0
+    profileFrame.Visible = false
+    profileFrame.Parent = profileGui
+
+    local profileCorner = Instance.new("UICorner")
+    profileCorner.CornerRadius = UDim.new(0, 8)
+    profileCorner.Parent = profileFrame
+
+    local profileStroke = Instance.new("UIStroke")
+    profileStroke.Color = Color3.fromRGB(130, 60, 210)
+    profileStroke.Thickness = 1
+    profileStroke.Transparency = 0.15
+    profileStroke.Parent = profileFrame
+
+    local avatar = Instance.new("ImageLabel")
+    avatar.Name = "Skin"
+    avatar.Size = UDim2.fromOffset(34, 34)
+    avatar.Position = UDim2.fromOffset(4, 4)
+    avatar.BackgroundTransparency = 1
+    avatar.Image = "rbxthumb://type=AvatarHeadShot&id=" .. localPlayer.UserId .. "&w=420&h=420"
+    avatar.Parent = profileFrame
+
+    local avatarCorner = Instance.new("UICorner")
+    avatarCorner.CornerRadius = UDim.new(1, 0)
+    avatarCorner.Parent = avatar
+
+    local username = Instance.new("TextLabel")
+    username.Name = "Username"
+    username.Size = UDim2.new(1, -46, 1, 0)
+    username.Position = UDim2.fromOffset(44, 0)
+    username.BackgroundTransparency = 1
+    username.Text = localPlayer.Name
+    username.TextColor3 = Color3.fromRGB(235, 220, 255)
+    username.TextSize = 13
+    username.Font = Enum.Font.GothamSemibold
+    username.TextXAlignment = Enum.TextXAlignment.Left
+    username.TextTruncate = Enum.TextTruncate.AtEnd
+    username.Parent = profileFrame
+
+    local titleLabel
+
+    local function findTitleLabel()
+        for _, object in ipairs(CoreGui:GetDescendants()) do
+            if object:IsA("TextLabel")
+                and string.find(string.upper(object.Text), "OWNER AFK PAID", 1, true) then
+                return object
+            end
+        end
+    end
+
+    task.spawn(function()
+        for _ = 1, 100 do
+            titleLabel = findTitleLabel()
+            if titleLabel then
+                break
+            end
+            task.wait(0.1)
+        end
+    end)
+
+    RunService.RenderStepped:Connect(function()
+        if not profileGui.Parent then
+            return
+        end
+
+        if not titleLabel or not titleLabel.Parent then
+            titleLabel = findTitleLabel()
+        end
+
+        if titleLabel and titleLabel.Visible then
+            local titlePosition = titleLabel.AbsolutePosition
+
+            profileFrame.Position = UDim2.fromOffset(
+                math.max(4, titlePosition.X - profileFrame.AbsoluteSize.X - 8),
+                titlePosition.Y
+                    + math.max(
+                        0,
+                        (titleLabel.AbsoluteSize.Y - profileFrame.AbsoluteSize.Y) / 2
+                    )
+            )
+
+            profileFrame.Visible = true
+        else
+            profileFrame.Visible = false
+        end
+    end)
+end)
+
+-- ==================== TABS ====================
+local FarmTab = Window:Tab({
+    Title = "🏋️ Farm",
+    Icon = "dumbbell"
+})
+
+local EggsTab = Window:Tab({
+    Title = "🥚 Eggs & Pets",
+    Icon = "egg"
+})
+
+local MiscTab = Window:Tab({
+    Title = "⚙️ Misc",
+    Icon = "sliders"
+})
+
+-- ==================== FARM TAB ====================
+local FarmSection = FarmTab:Section({
+    Title = "🏋️‍♂️ Lift Weight Fast"
+})
+
+-- 1. LIFT FAST ORIGINAL
+local autoLiftWeight = false
+local liftThreadId = 0
+
+FarmSection:Toggle({
+    Title = "⚡ Lift Weight Fast (Real Strength + Ultra Speed)",
+    Desc = "Usa o evento normal de repetição para preservar o cálculo real de força",
+    Value = false,
+
+    Callback = function(Value)
+        autoLiftWeight = Value
+
+        liftThreadId += 1
+        local thisThread = liftThreadId
+
+        DebugInfo("Lift Fast = " .. tostring(Value))
+
+        if not Value then
+            DebugInfo("Lift Fast stopped.")
+            return
+        end
+
+        task.spawn(function()
+            local player = Players.LocalPlayer
+            local backpack = player:WaitForChild("Backpack")
+
+            DebugInfo("Lift Fast thread started.")
+
+            while autoLiftWeight and thisThread == liftThreadId do
+                local ok, err = pcall(function()
+                    local character = player.Character
+
+                    if not character then return end
+                    local humanoid = character:FindFirstChildOfClass("Humanoid")
+                    if not humanoid or humanoid.Health <= 0 then return end
+
+                    local weight = character:FindFirstChild("Weight") or backpack:FindFirstChild("Weight")
+                    if not weight then
+                        for _, object in ipairs(character:GetChildren()) do
+                            if object:IsA("Tool") then weight = object break end
+                        end
+                    end
+                    if not weight then
+                        for _, object in ipairs(backpack:GetChildren()) do
+                            if object:IsA("Tool") then weight = object break end
+                        end
+                    end
+                    if not weight then return end
+
+                    local muscleEvent = player:FindFirstChild("muscleEvent")
+                    if not muscleEvent then
+                        local rEvents = ReplicatedStorage:FindFirstChild("rEvents")
+                        if rEvents then muscleEvent = rEvents:FindFirstChild("muscleEvent") end
+                    end
+                    if not muscleEvent then return end
+
+                    if weight.Parent == backpack then
+                        humanoid:EquipTool(weight)
+                        task.wait()
+                    end
+
+                    if weight.Parent == character then
+                        muscleEvent:FireServer("rep", weight)
+                        muscleEvent:FireServer("rep", weight)
+                        muscleEvent:FireServer("rep", weight)
+                    end
+                end)
+
+                if not ok then
+                    DebugError("Lift Fast runtime error", err)
+                end
+
+                task.wait(0.005)
+            end
+
+            DebugInfo("Lift Fast thread ended.")
+        end)
+    end
+})
+
+-- ==================== ASCENSION SECTION ====================
+local AscensionSection = FarmTab:Section({
+    Title = "🌌 Ascension"
+})
+
+local ascensionActive = false
+local ascensionThreadId = 0
+
+AscensionSection:Toggle({
+    Title = "🌌 ASCENSION",
+    Desc = "Automated execution for AscensionClient using hooks",
+    Value = false,
+    Callback = function(Value)
+        ascensionActive = Value
+        ascensionThreadId += 1
+        local thisThread = ascensionThreadId
+
+        if not Value then
+            return
+        end
+
+        task.spawn(function()
+            local ok, err = pcall(function()
+                local player = game:GetService("Players").LocalPlayer
+                local successClient, playerGui = pcall(function()
+                    return player:WaitForChild("PlayerGui", 5)
+                end)
+
+                if playerGui then
+                    local gameGui = playerGui:FindFirstChild("gameGui")
+                    if gameGui then
+                        local ascensionClient = gameGui:FindFirstChild("AscensionClient")
+                    end
+                end
+
+                local Event = game:GetService("ReplicatedStorage").rEvents.ascensionRemote
+                
+                if Event then
+                    local mtHook; mtHook = hookmetamethod(game, "__namecall", function(...)
+                        local self = ...
+
+                        if rawequal(self, Event) and getnamecallmethod() == "InvokeServer" then
+                            local Args = table.pack(...)
+                            local Result = table.pack(
+                                mtHook(self, table.unpack(Args, 1, Args.n))
+                            )
+
+                            print(`Intercepted (__namecall) {Event.Name}:InvokeServer()`, ...)
+                            return table.unpack(Result, 1, Result.n)
+                        end
+
+                        return mtHook(...)
+                    end)
+
+                    local OldInvokeServer; OldInvokeServer = hookfunction(Event.InvokeServer, function(...)
+                        local self = ...
+
+                        if rawequal(self, Event) then
+                            local Args = table.pack(...)
+                            local Result = table.pack(
+                                OldInvokeServer(table.unpack(Args, 1, Args.n))
+                            )
+
+                            print(`Intercepted (__index) {Event.Name}:InvokeServer()`, self, table.unpack(Result, 1, Result.n))
+                            return table.unpack(Result, 1, Result.n)
+                        end
+
+                        return OldInvokeServer(self, ...)
+                    end)
+
+                    while ascensionActive and thisThread == ascensionThreadId do
+                        pcall(function()
+                            Event:InvokeServer()
+                        end)
+                        task.wait(1)
+                    end
+                end
+            end)
+
+            if not ok then
+                DebugError("Ascension runtime error", err)
+            end
+        end)
+    end
+})
+
+-- ==================== REBIRTH MAX (FIXED & FULL INTEGRATION) ====================
+local RebirthSection = FarmTab:Section({
+    Title = "♻️ Rebirth"
+})
+
+local rebirthCustom = false
+local rebirthThreadId = 0
+
+RebirthSection:Toggle({
+    Title = "👑 REBIRTH MAX (Auto Limit)",
+    Desc = "Calcula e executa automaticamente o máximo de rebirths exatos do jogo",
+    Value = false,
+
+    Callback = function(Value)
+        rebirthCustom = Value
+        rebirthThreadId += 1
+        local thisThread = rebirthThreadId
+
+        DebugInfo("Rebirth Max = " .. tostring(Value))
+
+        if not Value then
+            return
+        end
+
+        task.spawn(function()
+            local leaderstats = localPlayer:WaitForChild("leaderstats", 5)
+            local strength = leaderstats and leaderstats:WaitForChild("Strength", 5)
+            local rebirths = leaderstats and leaderstats:WaitForChild("Rebirths", 5)
+            local globalFunctions = require(ReplicatedStorage:WaitForChild("globalFunctions"))
+            local rEvents = ReplicatedStorage:WaitForChild("rEvents")
+            local rebirthRemote = rEvents:WaitForChild("rebirthRemote")
+
+            -- Algoritmo exato extraído do MassRebirthClient para calcular ciclos permitidos ("X1K")
+            local function affordableCycles(p24)
+                local v25 = globalFunctions.calculateRequiredRebirthStrength
+                local v26 = rebirths.Value
+                local v27 = localPlayer
+                local v28 = tonumber(v25(v26, v27))
+                
+                local v29 = globalFunctions.calculateRequiredRebirthStrength
+                local v30 = rebirths.Value + 1
+                local v31 = localPlayer
+                local v32 = tonumber(v29(v30, v31))
+                
+                if v28 == nil or (v32 == nil or (v28 < 0 or v32 < 0)) then
+                    return 0
+                end
+                
+                local v33 = v32 - v28
+                local v34 = 0
+                while v34 < p24 do
+                    local v35 = (v34 + p24 + 1) * 0.5
+                    local v36 = math.floor(v35)
+                    if (v36 <= 0 and 0 or v36 * v28 + v33 * v36 * (v36 - 1) * 0.5) <= strength.Value then
+                        v34 = v36
+                    else
+                        p24 = v36 - 1
+                    end
+                end
+                return v34
+            end
+
+            while rebirthCustom and thisThread == rebirthThreadId do
+                local ok, err = pcall(function()
+                    if strength and rebirths and rebirthRemote then
+                        -- Calcula o limite máximo suportado por requisição no jogo atual ("X1K" dinâmico)
+                        local v61 = globalFunctions.calculateMaxRebirthsPerRequest
+                        local v62 = localPlayer
+                        local v63 = tonumber(v61(v62))
+                        local v64 = math.floor(v63 or 100000)
+                        local v65 = math.max(1, v64)
+                        
+                        local v66 = globalFunctions.calculatePetRebirthGainMultiplier
+                        local v67 = localPlayer
+                        local v68 = tonumber(v66(v67))
+                        local v69 = v65 / ((v68 == nil or (v68 ~= v68 or v68 < 1)) and 1 or v68)
+                        local v70 = math.floor(v69)
+                        
+                        -- Pega a quantidade exata suportada por ciclos
+                        local finalRebirthAmount = affordableCycles(math.max(1, v70))
+
+                        if finalRebirthAmount > 0 then
+                            rebirthRemote:InvokeServer("rebirthRequest", finalRebirthAmount)
+                        end
+                    end
+                end)
+
+                if not ok then
+                    DebugError("Rebirth runtime error", err)
+                end
+
+                task.wait(0.5)
+            end
+        end)
+    end
+})
+
+-- ==================== EGGS & PETS ====================
+local EggsSection = EggsTab:Section({
+    Title = "🥚 Weakness Crystal Opener"
+})
+
+EggsSection:Button({
+    Title = "📍 Teleport to Weakness Crystal",
+    Desc = "Teleports directly to the Weakness Crystal position",
+
+    Callback = function()
+        pcall(function()
+            local char = localPlayer.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+
+            if hrp then
+                hrp.CFrame = CFrame.new(
+                    -110.298546,
+                    28.5879612,
+                    1854.59827
+                )
+
+                WindUI:Notify({
+                    Title = "Teleported",
+                    Content = "You arrived at Weakness Crystal!",
+                    Duration = 2
+                })
+            end
+        end)
+    end
+})
+
+local autoOpenWeakness = false
+local openThreadId = 0
+
+EggsSection:Toggle({
+    Title = "🐣 Ultra Fast Auto Open - Weakness Crystal",
+    Desc = "Abre ovos rapidamente sem travar o jogo",
+    Value = false,
+
+    Callback = function(Value)
+        autoOpenWeakness = Value
+        openThreadId += 1
+        local thisThread = openThreadId
+
+        DebugInfo("Auto Open = " .. tostring(Value))
+
+        if not Value then
+            return
+        end
+
+        task.spawn(function()
+            local openCrystalRemote
+
+            while autoOpenWeakness and thisThread == openThreadId do
+                local ok, err = pcall(function()
+                    local rEvents = ReplicatedStorage:FindFirstChild("rEvents")
+                    openCrystalRemote = rEvents and rEvents:FindFirstChild("openCrystalRemote")
+
+                    if openCrystalRemote then
+                        openCrystalRemote:InvokeServer("openCrystal", "Weakness Crystal")
+                        openCrystalRemote:InvokeServer("openCrystal", "Weakness Crystal")
+                        openCrystalRemote:InvokeServer("openCrystal", "Weakness Crystal")
+                    else
+                        DebugWarn("openCrystalRemote not found.")
+                    end
+                end)
+
+                if not ok then
+                    DebugError("Auto Open runtime error", err)
+                end
+
+                task.wait()
+            end
+        end)
+    end
+})
+
+-- ==================== AUTO EVOLVE ====================
+local EvolveSection = EggsTab:Section({
+    Title = "🧬 Auto Evolve All"
+})
+
+local autoEvolveAll = false
+local evolveThreadId = 0
+
+EvolveSection:Toggle({
+    Title = "🧬 Enable Evolve All",
+    Desc = "Continuously triggers evolveAll via petEvolveEvent",
+    Value = false,
+
+    Callback = function(Value)
+        autoEvolveAll = Value
+        evolveThreadId += 1
+        local thisThread = evolveThreadId
+
+        DebugInfo("Evolve All = " .. tostring(Value))
+
+        if not Value then
+            return
+        end
+
+        task.spawn(function()
+            while autoEvolveAll and thisThread == evolveThreadId do
+                local ok, err = pcall(function()
+                    local rEvents = ReplicatedStorage:FindFirstChild("rEvents")
+                    local evolveEvent = rEvents and rEvents:FindFirstChild("petEvolveEvent")
+
+                    if evolveEvent then
+                        evolveEvent:FireServer("evolveAll")
+                    else
+                        DebugWarn("petEvolveEvent not found.")
+                    end
+                end)
+
+                if not ok then
+                    DebugError("Evolve runtime error", err)
+                end
+
+                task.wait(0.1)
+            end
+        end)
+    end
+})
+
+-- ==================== MISC TAB ====================
+local MiscSection = MiscTab:Section({
+    Title = "⚙️ Utilities"
+})
+
+MiscSection:Toggle({
+    Title = "📉 Low Graphics / FPS Boost (Anti-Lag Pro)",
+    Desc = "Remove texturas, sombras, efeitos e reduz efeitos visuais",
+    Value = false,
+
+    Callback = function(Value)
+        local ok, err = pcall(function()
+            local lighting = game:GetService("Lighting")
+            local terrain = workspace:FindFirstChildOfClass("Terrain")
+
+            if Value then
+                settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+                lighting.GlobalShadows = false
+                lighting.FogEnd = 9e9
+
+                if terrain then
+                    terrain.WaterWaveSize = 0
+                    terrain.WaterWaveSpeed = 0
+                    terrain.WaterReflectance = 0
+                    terrain.WaterTransparency = 0
+                end
+
+                for _, v in ipairs(workspace:GetDescendants()) do
+                    if v:IsA("ParticleEmitter")
+                        or v:IsA("Trail")
+                        or v:IsA("Fire")
+                        or v:IsA("Smoke")
+                        or v:IsA("Sparkles") then
+
+                        v.Enabled = false
+
+                    elseif v:IsA("BasePart") then
+                        v.Material = Enum.Material.SmoothPlastic
+                    end
+                end
+            else
+                settings().Rendering.QualityLevel = Enum.QualityLevel.Automatic
+                lighting.GlobalShadows = true
+            end
+        end)
+
+        if not ok then
+            DebugError("Low Graphics runtime error", err)
+        end
+    end
+})
+
+-- ==================== FREEZE ====================
+local freezeEnabled = false
+local frozenCFrame = nil
+local freezeConnection = nil
+
+MiscSection:Toggle({
+    Title = "❄️ Lock / Freeze (Lock Current Position)",
+    Desc = "Freezes your character right where you are without falling",
+    Value = false,
+
+    Callback = function(Value)
+        freezeEnabled = Value
+        local player = Players.LocalPlayer
+
+        if freezeEnabled then
+            if freezeConnection then
+                freezeConnection:Disconnect()
+                freezeConnection = nil
+            end
+
+            local char = player.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+
+            if hrp then
+                frozenCFrame = hrp.CFrame
+            end
+
+            freezeConnection = RunService.Heartbeat:Connect(function()
+                local currentCharacter = player.Character
+                local currentHrp = currentCharacter and currentCharacter:FindFirstChild("HumanoidRootPart")
+
+                if currentHrp and frozenCFrame then
+                    currentHrp.CFrame = frozenCFrame
+                    currentHrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                    currentHrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+                end
+            end)
+
+            DebugInfo("Freeze enabled.")
+        else
+            if freezeConnection then
+                freezeConnection:Disconnect()
+                freezeConnection = nil
+            end
+
+            frozenCFrame = nil
+            DebugInfo("Freeze disabled.")
+        end
+    end
+})
+
+-- ==================== ANTI AFK ====================
+local antiAfkEnabled = false
+local antiAfkConnection = nil
+
+MiscSection:Toggle({
+    Title = "💤 Anti AFK",
+    Desc = "Prevents disconnection due to inactivity",
+    Value = false,
+
+    Callback = function(Value)
+        antiAfkEnabled = Value
+
+        if antiAfkEnabled then
+            if antiAfkConnection then
+                antiAfkConnection:Disconnect()
+                antiAfkConnection = nil
+            end
+
+            local VirtualUser = game:GetService("VirtualUser")
+
+            antiAfkConnection = Players.LocalPlayer.Idled:Connect(function()
+                VirtualUser:CaptureController()
+                VirtualUser:ClickButton2(Vector2.new())
+            end)
+
+            DebugInfo("Anti AFK enabled.")
+        else
+            if antiAfkConnection then
+                antiAfkConnection:Disconnect()
+                antiAfkConnection = nil
+            end
+
+            DebugInfo("Anti AFK disabled.")
+        end
+    end
+})
+
+-- ==================== STARTUP ====================
+DebugInfo("OWNER AFK PAID loaded.")
+DebugInfo("F9 debug logging is enabled.")
+
+WindUI:Notify({
+    Title = "OWNER AFK PAID",
+    Content = "Script carregado com sucesso!",
+    Duration = 3
+})
+
