@@ -518,6 +518,7 @@ local crystalNames = {
     "Space Crystal",
     "Lost Crystal",
     "Sunken Crystal",
+    "Hydra Crystal",
 }
 
 local function getCrystalRemote()
@@ -557,6 +558,20 @@ EggsSection:Dropdown({
     Callback = function(Value)
         selectedCrystal = tostring(Value)
         DebugInfo("Selected Crystal = " .. selectedCrystal)
+    end
+})
+
+EggsSection:Button({
+    Title = "🐉 OPEN HYDRA CRYSTAL",
+    Desc = "Abre o Hydra Crystal usando openCrystalRemote.",
+    Callback = function()
+        if openCrystal("Hydra Crystal") then
+            WindUI:Notify({
+                Title = "🐉 Hydra Crystal",
+                Content = "Hydra Crystal aberto.",
+                Duration = 2
+            })
+        end
     end
 })
 
@@ -1320,3 +1335,4 @@ WindUI:Notify({
     Content = "Script carregado com sucesso!",
     Duration = 3
 })
+
