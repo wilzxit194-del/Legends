@@ -84,12 +84,12 @@ local function setMenuVisible(visible)
     menuVisible = visible
 
     pcall(function()
-        if Window.SetVisible then
+        if Window.Toggle then
+            Window:Toggle()
+        elseif Window.SetVisible then
             Window:SetVisible(visible)
-        elseif Window.Toggle then
-            if visible ~= menuVisible then
-                Window:Toggle()
-            end
+        elseif Window.Main then
+            Window.Main.Visible = visible
         end
     end)
 end
@@ -1258,3 +1258,4 @@ WindUI:Notify({
     Content = "Loaded! Press LeftControl to open and close.",
     Duration = 4
 })
+
