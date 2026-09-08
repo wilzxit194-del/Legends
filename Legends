@@ -78,22 +78,19 @@ pcall(function()
 end)
 
 -- ==================== OPEN/CLOSE HOTKEYS ====================
--- O = abrir | F = fechar
--- O e F são independentes e não repetem enquanto a tecla estiver segurada.
+-- LeftControl para alternar (abrir/fechar) o menu.
 local menuVisible = false
 
-local function setMenuVisible(visible)
-    menuVisible = visible
+local function toggleMenuVisible()
+    menuVisible = not menuVisible
 
     local ok = pcall(function()
         if Window.SetVisible then
-            Window:SetVisible(visible)
+            Window:SetVisible(menuVisible)
             return true
         end
         if Window.Toggle then
-            if visible ~= menuVisible then
-                Window:Toggle()
-            end
+            Window:Toggle()
             return true
         end
     end)
@@ -108,10 +105,8 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         return
     end
 
-    if input.KeyCode == Enum.KeyCode.O then
-        setMenuVisible(true)
-    elseif input.KeyCode == Enum.KeyCode.F then
-        setMenuVisible(false)
+    if input.KeyCode == Enum.KeyCode.LeftControl then
+        toggleMenuVisible()
     end
 end)
 
@@ -1250,7 +1245,6 @@ MiscSection:Toggle({
 })
 
 -- ==================== STARTUP ====================
--- O abre e F fecha.
 -- Começa fechado.
 pcall(function()
     if Window.SetVisible then
@@ -1259,12 +1253,11 @@ pcall(function()
 end)
 
 DebugInfo("OWNER AFK PAID loaded.")
-DebugInfo("Hotkeys: O = Open | F = Close")
+DebugInfo("Hotkeys: LeftControl = Open/Close")
 DebugInfo("F9 debug logging is enabled.")
 
 WindUI:Notify({
     Title = "OWNER AFK PAID",
-    Content = "Loaded! Press O to open and F to close.",
+    Content = "Loaded! Press LeftControl to open and close.",
     Duration = 4
 })
-
