@@ -26,7 +26,6 @@ end
 DebugInfo("WindUI loaded successfully.")
 
 -- ==================== THEME ====================
--- Tema e cores do menu V19
 WindUI:AddTheme({
     Name = "IceBlueTheme",
     Accent = Color3.fromRGB(145, 205, 235),
@@ -56,7 +55,11 @@ local Window = WindUI:CreateWindow({
         Enabled = true,
         Anonymous = false,
         Callback = function()
-            WindUI:Notify({Title = "Profile", Content = game:GetService("Players").LocalPlayer.Name, Duration = 2})
+            WindUI:Notify({
+                Title = "Profile",
+                Content = game:GetService("Players").LocalPlayer.Name,
+                Duration = 2
+            })
         end,
     },
 })
@@ -64,6 +67,7 @@ local Window = WindUI:CreateWindow({
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 local localPlayer = Players.LocalPlayer
 
 pcall(function()
@@ -71,6 +75,44 @@ pcall(function()
         Name = localPlayer.Name,
         Image = "rbxthumb://type=AvatarHeadShot&id=" .. localPlayer.UserId .. "&w=420&h=420",
     })
+end)
+
+-- ==================== OPEN/CLOSE HOTKEYS ====================
+-- O = abrir | F = fechar
+-- O e F são independentes e não repetem enquanto a tecla estiver segurada.
+local menuVisible = false
+
+local function setMenuVisible(visible)
+    menuVisible = visible
+
+    local ok = pcall(function()
+        if Window.SetVisible then
+            Window:SetVisible(visible)
+            return true
+        end
+        if Window.Toggle then
+            if visible ~= menuVisible then
+                Window:Toggle()
+            end
+            return true
+        end
+    end)
+
+    if not ok then
+        DebugWarn("Não foi possível controlar a visibilidade da Window pela API disponível.")
+    end
+end
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed or UserInputService:GetFocusedTextBox() then
+        return
+    end
+
+    if input.KeyCode == Enum.KeyCode.O then
+        setMenuVisible(true)
+    elseif input.KeyCode == Enum.KeyCode.F then
+        setMenuVisible(false)
+    end
 end)
 
 -- ==================== PLAYER PROFILE ====================
@@ -138,7 +180,7 @@ pcall(function()
     local function findTitleLabel()
         for _, object in ipairs(CoreGui:GetDescendants()) do
             if object:IsA("TextLabel")
-                and string.find(string.upper(object.Text), "OWNER AFK PAID", 1, true) then
+                and string.find(string.upper(object.Text), "OWNER AFK", 1, true) then
                 return object
             end
         end
@@ -163,16 +205,15 @@ pcall(function()
             titleLabel = findTitleLabel()
         end
 
-        if titleLabel and titleLabel.Visible then
+        if titleLabel and titleLabel.Visible and menuVisible then
             local titlePosition = titleLabel.AbsolutePosition
 
             profileFrame.Position = UDim2.fromOffset(
                 math.max(4, titlePosition.X - profileFrame.AbsoluteSize.X - 8),
-                titlePosition.Y
-                    + math.max(
-                        0,
-                        (titleLabel.AbsoluteSize.Y - profileFrame.AbsoluteSize.Y) / 2
-                    )
+                titlePosition.Y + math.max(
+                    0,
+                    (titleLabel.AbsoluteSize.Y - profileFrame.AbsoluteSize.Y) / 2
+                )
             )
 
             profileFrame.Visible = true
@@ -203,7 +244,6 @@ local FarmSection = FarmTab:Section({
     Title = "⚡ Lift Weight • Turbo Farm"
 })
 
--- 1. LIFT FAST ORIGINAL
 local autoLiftWeight = false
 local liftThreadId = 0
 local turboLift = false
@@ -212,10 +252,8 @@ FarmSection:Toggle({
     Title = "⚡ Lift Weight Fast • Turbo",
     Desc = "Farm de força com referências em cache e ciclo otimizado",
     Value = false,
-
     Callback = function(Value)
         autoLiftWeight = Value
-
         liftThreadId += 1
         local thisThread = liftThreadId
 
@@ -235,12 +273,14 @@ FarmSection:Toggle({
             while autoLiftWeight and thisThread == liftThreadId do
                 local ok, err = pcall(function()
                     local character = player.Character
-
                     if not character then return end
+
                     local humanoid = character:FindFirstChildOfClass("Humanoid")
                     if not humanoid or humanoid.Health <= 0 then return end
 
-                    local weight = character:FindFirstChild("Weight") or backpack:FindFirstChild("Weight")
+                    local weight = character:FindFirstChild("Weight")
+                        or backpack:FindFirstChild("Weight")
+
                     if not weight then
                         for _, object in ipairs(character:GetChildren()) do
                             if object:IsA("Tool") then
@@ -249,6 +289,7 @@ FarmSection:Toggle({
                             end
                         end
                     end
+
                     if not weight then
                         for _, object in ipairs(backpack:GetChildren()) do
                             if object:IsA("Tool") then
@@ -257,6 +298,7 @@ FarmSection:Toggle({
                             end
                         end
                     end
+
                     if not weight then return end
 
                     local muscleEvent = player:FindFirstChild("muscleEvent")
@@ -301,7 +343,7 @@ FarmSection:Toggle({
     end
 })
 
--- ==================== ASCENSION SECTION ====================
+-- ==================== ASCENSION ====================
 local AscensionSection = FarmTab:Section({
     Title = "🌌 Ascension"
 })
@@ -324,53 +366,9 @@ AscensionSection:Toggle({
 
         task.spawn(function()
             local ok, err = pcall(function()
-                local player = game:GetService("Players").LocalPlayer
-                local successClient, playerGui = pcall(function()
-                    return player:WaitForChild("PlayerGui", 5)
-                end)
+                local Event = ReplicatedStorage.rEvents.ascensionRemote
 
-                if playerGui then
-                    local gameGui = playerGui:FindFirstChild("gameGui")
-                    if gameGui then
-                        local ascensionClient = gameGui:FindFirstChild("AscensionClient")
-                    end
-                end
-
-                local Event = game:GetService("ReplicatedStorage").rEvents.ascensionRemote
-                
                 if Event then
-                    local mtHook; mtHook = hookmetamethod(game, "__namecall", function(...)
-                        local self = ...
-
-                        if rawequal(self, Event) and getnamecallmethod() == "InvokeServer" then
-                            local Args = table.pack(...)
-                            local Result = table.pack(
-                                mtHook(self, table.unpack(Args, 1, Args.n))
-                            )
-
-                            print(`Intercepted (__namecall) {Event.Name}:InvokeServer()`, ...)
-                            return table.unpack(Result, 1, Result.n)
-                        end
-
-                        return mtHook(...)
-                    end)
-
-                    local OldInvokeServer; OldInvokeServer = hookfunction(Event.InvokeServer, function(...)
-                        local self = ...
-
-                        if rawequal(self, Event) then
-                            local Args = table.pack(...)
-                            local Result = table.pack(
-                                OldInvokeServer(table.unpack(Args, 1, Args.n))
-                            )
-
-                            print(`Intercepted (__index) {Event.Name}:InvokeServer()`, self, table.unpack(Result, 1, Result.n))
-                            return table.unpack(Result, 1, Result.n)
-                        end
-
-                        return OldInvokeServer(self, ...)
-                    end)
-
                     while ascensionActive and thisThread == ascensionThreadId do
                         pcall(function()
                             Event:InvokeServer()
@@ -387,7 +385,7 @@ AscensionSection:Toggle({
     end
 })
 
--- ==================== REBIRTH MAX (FIXED & FULL INTEGRATION) ====================
+-- ==================== REBIRTH ====================
 local RebirthSection = FarmTab:Section({
     Title = "♻️ Rebirth"
 })
@@ -399,7 +397,6 @@ RebirthSection:Toggle({
     Title = "👑 REBIRTH MAX (Auto Limit)",
     Desc = "Calcula e executa automaticamente o máximo de rebirths exatos do jogo",
     Value = false,
-
     Callback = function(Value)
         rebirthCustom = Value
         rebirthThreadId += 1
@@ -424,27 +421,31 @@ RebirthSection:Toggle({
                 local v26 = rebirths.Value
                 local v27 = localPlayer
                 local v28 = tonumber(v25(v26, v27))
-                
+
                 local v29 = globalFunctions.calculateRequiredRebirthStrength
                 local v30 = rebirths.Value + 1
                 local v31 = localPlayer
                 local v32 = tonumber(v29(v30, v31))
-                
-                if v28 == nil or (v32 == nil or (v28 < 0 or v32 < 0)) then
+
+                if v28 == nil or v32 == nil or v28 < 0 or v32 < 0 then
                     return 0
                 end
-                
+
                 local v33 = v32 - v28
                 local v34 = 0
+
                 while v34 < p24 do
                     local v35 = (v34 + p24 + 1) * 0.5
                     local v36 = math.floor(v35)
-                    if (v36 <= 0 and 0 or v36 * v28 + v33 * v36 * (v36 - 1) * 0.5) <= strength.Value then
+
+                    if (v36 <= 0 and 0 or
+                        v36 * v28 + v33 * v36 * (v36 - 1) * 0.5) <= strength.Value then
                         v34 = v36
                     else
                         p24 = v36 - 1
                     end
                 end
+
                 return v34
             end
 
@@ -452,17 +453,15 @@ RebirthSection:Toggle({
                 local ok, err = pcall(function()
                     if strength and rebirths and rebirthRemote then
                         local v61 = globalFunctions.calculateMaxRebirthsPerRequest
-                        local v62 = localPlayer
-                        local v63 = tonumber(v61(v62))
+                        local v63 = tonumber(v61(localPlayer))
                         local v64 = math.floor(v63 or 100000)
                         local v65 = math.max(1, v64)
-                        
+
                         local v66 = globalFunctions.calculatePetRebirthGainMultiplier
-                        local v67 = localPlayer
-                        local v68 = tonumber(v66(v67))
-                        local v69 = v65 / ((v68 == nil or (v68 ~= v68 or v68 < 1)) and 1 or v68)
+                        local v68 = tonumber(v66(localPlayer))
+                        local v69 = v65 / ((v68 == nil or v68 ~= v68 or v68 < 1) and 1 or v68)
                         local v70 = math.floor(v69)
-                        
+
                         local finalRebirthAmount = affordableCycles(math.max(1, v70))
 
                         if finalRebirthAmount > 0 then
@@ -486,13 +485,10 @@ local EggsSection = EggsTab:Section({
     Title = "💎 All Crystals Opener"
 })
 
--- ==================== ALL CRYSTAL OPENER ====================
 local selectedCrystal = "Weakness Crystal"
 local autoOpenCrystal = false
 local crystalOpenThreadId = 0
 
--- Crystals encontrados no scan global.
--- A lista representa nomes únicos visíveis no cliente durante o scan.
 local crystalNames = {
     "Blue Crystal",
     "Green Crystal",
@@ -607,9 +603,6 @@ EggsSection:Toggle({
         task.spawn(function()
             while autoOpenCrystal and thisThread == crystalOpenThreadId do
                 openCrystal(selectedCrystal)
-
-                -- Delay controlado para evitar spam no RemoteEvent/RemoteFunction.
-                -- 0.35s estava agressivo demais e pode causar kick por rate-limit.
                 task.wait(0.75)
             end
         end)
@@ -628,6 +621,7 @@ EggsSection:Button({
         end
 
         local added = 0
+
         if folder then
             for _, object in ipairs(folder:GetChildren()) do
                 local name = tostring(object.Name)
@@ -653,7 +647,6 @@ EggsSection:Button({
     end
 })
 
--- Mantém o teleporte específico que já existia no V20.
 EggsSection:Button({
     Title = "📍 Teleport to Weakness Crystal",
     Desc = "Teleports directly to the Weakness Crystal position",
@@ -663,11 +656,7 @@ EggsSection:Button({
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
 
             if hrp then
-                hrp.CFrame = CFrame.new(
-                    -110.298546,
-                    28.5879612,
-                    1854.59827
-                )
+                hrp.CFrame = CFrame.new(-110.298546, 28.5879612, 1854.59827)
 
                 WindUI:Notify({
                     Title = "Teleported",
@@ -686,9 +675,8 @@ local TeleportEggsSection = EggsTab:Section({
 
 local eggTeleportEntries = {}
 local selectedEggTeleport = nil
+local EggTeleportDropdown
 
--- Lista oficial dos nomes dos Crystals existentes no jogo.
--- Esses são os mesmos nomes usados no Crystal opener.
 local teleportCrystalNames = {
     "Blue Crystal",
     "Green Crystal",
@@ -748,55 +736,10 @@ local function getCrystalPosition(object)
     return nil
 end
 
-local function addTeleportCrystal(entries, seen, object, forcedName)
-    if not object or not object.Parent then
-        return
-    end
-
-    local rawName = forcedName or tostring(object.Name)
-    local lowerName = rawName:lower()
-
-    if lowerName == "crystal"
-        or lowerName:find("script", 1, true) then
-        return
-    end
-
-    if not lowerName:find("crystal", 1, true) then
-        return
-    end
-
-    local position = getCrystalPosition(object)
-    if not position then
-        return
-    end
-
-    -- Evita duplicar o mesmo objeto.
-    if seen[object] then
-        return
-    end
-
-    seen[object] = true
-
-    entries[#entries + 1] = {
-        object = object,
-        name = rawName,
-        displayName = rawName,
-        position = position
-    }
-end
-
 local function scanEggTeleportEntries()
     local entries = {}
-    local seenObjects = {}
     local seenNames = {}
 
-    -- PRIMEIRO: usa os containers reais do mapCrystalsFolder.
-    -- Isso é importante porque o log mostrou:
-    -- mapCrystalsFolder."Nome do Crystal"
-    --     └── Crystal
-    --
-    -- O erro anterior acontecia quando o filho "Crystal" era encontrado
-    -- antes do container, fazendo a dropdown mostrar "Crystal (1)".
     local mapCrystalsFolder = workspace:FindFirstChild("mapCrystalsFolder")
 
     if mapCrystalsFolder then
@@ -812,8 +755,6 @@ local function scanEggTeleportEntries()
 
                 if position and not seenNames[lowerName] then
                     seenNames[lowerName] = true
-                    seenObjects[object] = true
-
                     entries[#entries + 1] = {
                         object = object,
                         name = objectName,
@@ -825,8 +766,6 @@ local function scanEggTeleportEntries()
         end
     end
 
-    -- SEGUNDO: procura pelos nomes oficiais em qualquer outro lugar do
-    -- Workspace. Assim também encontra Crystals que estejam fora da pasta.
     for _, object in ipairs(workspace:GetDescendants()) do
         local objectName = tostring(object.Name)
         local lowerName = objectName:lower()
@@ -839,8 +778,6 @@ local function scanEggTeleportEntries()
 
             if position then
                 seenNames[lowerName] = true
-                seenObjects[object] = true
-
                 entries[#entries + 1] = {
                     object = object,
                     name = objectName,
@@ -851,8 +788,6 @@ local function scanEggTeleportEntries()
         end
     end
 
-    -- TERCEIRO: pega algum Crystal adicional que o jogo possa adicionar
-    -- no futuro, mas nunca transforma o filho genérico "Crystal" em opção.
     for _, object in ipairs(workspace:GetDescendants()) do
         local objectName = tostring(object.Name)
         local lowerName = objectName:lower()
@@ -866,8 +801,6 @@ local function scanEggTeleportEntries()
 
             if position then
                 seenNames[lowerName] = true
-                seenObjects[object] = true
-
                 entries[#entries + 1] = {
                     object = object,
                     name = objectName,
@@ -895,7 +828,6 @@ local function buildEggTeleportDropdownValues()
     return values
 end
 
--- Primeiro scan antes de criar a Dropdown.
 eggTeleportEntries = scanEggTeleportEntries()
 local initialEggTeleportValues = buildEggTeleportDropdownValues()
 selectedEggTeleport = initialEggTeleportValues[1]
@@ -907,13 +839,12 @@ local function refreshEggTeleportList()
     selectedEggTeleport = dropdownValues[1]
 
     if EggTeleportDropdown then
-        EggTeleportDropdown:Refresh(dropdownValues)
-
-        if selectedEggTeleport then
-            pcall(function()
+        pcall(function()
+            EggTeleportDropdown:Refresh(dropdownValues)
+            if selectedEggTeleport then
                 EggTeleportDropdown:Select(selectedEggTeleport)
-            end)
-        end
+            end
+        end)
     end
 
     return #dropdownValues
@@ -941,8 +872,6 @@ local function teleportToEggEntry(entry)
         return false
     end
 
-    -- Mantém o personagem fora do Crystal:
-    -- 12 studs para a direita + 3 studs para cima.
     local teleportOffset = Vector3.new(12, 3, 0)
     hrp.CFrame = CFrame.new(entry.position + teleportOffset)
 
@@ -954,8 +883,6 @@ local function teleportToEggEntry(entry)
 
     return true
 end
-
-local EggTeleportDropdown
 
 EggTeleportDropdown = TeleportEggsSection:Dropdown({
     Title = "🥚 Select Egg / Crystal",
@@ -1059,7 +986,6 @@ EvolveSection:Toggle({
     Title = "🧬 Enable Evolve All",
     Desc = "Continuously triggers evolveAll via petEvolveEvent",
     Value = false,
-
     Callback = function(Value)
         autoEvolveAll = Value
         evolveThreadId += 1
@@ -1099,7 +1025,7 @@ local MiscSection = MiscTab:Section({
     Title = "🛠️ Utilities • Tools & Performance"
 })
 
--- ==================== GHOST V2 • ANTI-PVP ====================
+-- ==================== GHOST V2 ====================
 local ghostV2Enabled = false
 local ghostOriginalTransparency = {}
 local ghostConnections = {}
@@ -1159,8 +1085,11 @@ local function ghostSet(enabled)
 
         if player.Character then
             table.insert(ghostConnections, player.Character.DescendantAdded:Connect(function(obj)
-                if ghostV2Enabled and (obj:IsA("BasePart") or obj:IsA("Decal") or obj:IsA("Texture")) then
+                if ghostV2Enabled
+                    and (obj:IsA("BasePart") or obj:IsA("Decal") or obj:IsA("Texture")) then
+
                     task.wait()
+
                     if ghostV2Enabled then
                         ghostRemember(obj)
                         obj.Transparency = 1
@@ -1179,7 +1108,6 @@ MiscSection:Toggle({
     Title = "👻 Ghost V2 • Anti-PvP",
     Desc = "Invisibilidade local e restauração automática após respawn.",
     Value = false,
-
     Callback = function(Value)
         ghostSet(Value)
 
@@ -1195,7 +1123,6 @@ MiscSection:Toggle({
     Title = "📉 Low Graphics / FPS Boost (Anti-Lag Pro)",
     Desc = "Remove texturas, sombras, efeitos e reduz efeitos visuais",
     Value = false,
-
     Callback = function(Value)
         local ok, err = pcall(function()
             local lighting = game:GetService("Lighting")
@@ -1221,7 +1148,6 @@ MiscSection:Toggle({
                         or v:IsA("Sparkles") then
 
                         v.Enabled = false
-
                     elseif v:IsA("BasePart") then
                         v.Material = Enum.Material.SmoothPlastic
                     end
@@ -1247,10 +1173,8 @@ MiscSection:Toggle({
     Title = "❄️ Lock / Freeze (Lock Current Position)",
     Desc = "Freezes your character right where you are without falling",
     Value = false,
-
     Callback = function(Value)
         freezeEnabled = Value
-        local player = Players.LocalPlayer
 
         if freezeEnabled then
             if freezeConnection then
@@ -1258,7 +1182,7 @@ MiscSection:Toggle({
                 freezeConnection = nil
             end
 
-            local char = player.Character
+            local char = localPlayer.Character
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
 
             if hrp then
@@ -1266,7 +1190,7 @@ MiscSection:Toggle({
             end
 
             freezeConnection = RunService.Heartbeat:Connect(function()
-                local currentCharacter = player.Character
+                local currentCharacter = localPlayer.Character
                 local currentHrp = currentCharacter and currentCharacter:FindFirstChild("HumanoidRootPart")
 
                 if currentHrp and frozenCFrame then
@@ -1297,7 +1221,6 @@ MiscSection:Toggle({
     Title = "💤 Anti AFK",
     Desc = "Prevents disconnection due to inactivity",
     Value = false,
-
     Callback = function(Value)
         antiAfkEnabled = Value
 
@@ -1327,12 +1250,21 @@ MiscSection:Toggle({
 })
 
 -- ==================== STARTUP ====================
+-- O abre e F fecha.
+-- Começa fechado.
+pcall(function()
+    if Window.SetVisible then
+        Window:SetVisible(false)
+    end
+end)
+
 DebugInfo("OWNER AFK PAID loaded.")
+DebugInfo("Hotkeys: O = Open | F = Close")
 DebugInfo("F9 debug logging is enabled.")
 
 WindUI:Notify({
     Title = "OWNER AFK PAID",
-    Content = "Script carregado com sucesso!",
-    Duration = 3
+    Content = "Loaded! Press O to open and F to close.",
+    Duration = 4
 })
 
