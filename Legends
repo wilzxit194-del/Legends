@@ -78,26 +78,24 @@ pcall(function()
 end)
 
 -- ==================== OPEN/CLOSE HOTKEYS ====================
--- LeftControl para alternar (abrir/fechar) o menu.
 local menuVisible = false
 
-local function toggleMenuVisible()
-    menuVisible = not menuVisible
+local function setMenuVisible(visible)
+    menuVisible = visible
 
-    local ok = pcall(function()
+    pcall(function()
         if Window.SetVisible then
-            Window:SetVisible(menuVisible)
-            return true
-        end
-        if Window.Toggle then
-            Window:Toggle()
-            return true
+            Window:SetVisible(visible)
+        elseif Window.Toggle then
+            if visible ~= menuVisible then
+                Window:Toggle()
+            end
         end
     end)
+end
 
-    if not ok then
-        DebugWarn("Não foi possível controlar a visibilidade da Window pela API disponível.")
-    end
+local function toggleMenuVisible()
+    setMenuVisible(not menuVisible)
 end
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
@@ -1245,7 +1243,6 @@ MiscSection:Toggle({
 })
 
 -- ==================== STARTUP ====================
--- Começa fechado.
 pcall(function()
     if Window.SetVisible then
         Window:SetVisible(false)
